@@ -504,18 +504,215 @@ function playTone(freq, duration, type = 'square', volume = 0.08) {
   osc.stop(audioCtx.currentTime + duration);
 }
 
-function sfxType() { [200,300,400,500].forEach((f,i) => setTimeout(() => playTone(f, 0.08), i * 60)); }
-function sfxSelect() { playTone(600, 0.06); playTone(800, 0.06); setTimeout(() => playTone(1000, 0.1), 80); }
+// Schedule a tone at a specific audioCtx time (for tight musical timing)
+function scheduleTone(freq, startTime, duration, type = 'square', volume = 0.06) {
+  ensureAudio();
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = type;
+  osc.frequency.value = freq;
+  gain.gain.setValueAtTime(volume, startTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.start(startTime);
+  osc.stop(startTime + duration);
+}
+
+// Noise generator for drums
+function playNoise(duration, volume = 0.05, startTime = null) {
+  ensureAudio();
+  const bufferSize = audioCtx.sampleRate * duration;
+  const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+  const src = audioCtx.createBufferSource();
+  src.buffer = buffer;
+  const gain = audioCtx.createGain();
+  const t = startTime || audioCtx.currentTime;
+  gain.gain.setValueAtTime(volume, t);
+  gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
+  src.connect(gain);
+  gain.connect(audioCtx.destination);
+  src.start(t);
+}
+
+function sfxSelect() {
+  ensureAudio();
+  const t = audioCtx.currentTime;
+  scheduleTone(600, t, 0.06);
+  scheduleTone(900, t + 0.06, 0.1);
+}
+
 function sfxWarp() {
-  for (let i = 0; i < 20; i++) setTimeout(() => playTone(200 + i * 80, 0.12, 'sawtooth', 0.04), i * 50);
+  ensureAudio();
+  const t = audioCtx.currentTime;
+  for (let i = 0; i < 24; i++) {
+    scheduleTone(200 + i * 80, t + i * 0.04, 0.1, 'sawtooth', 0.03);
+    if (i % 3 === 0) playNoise(0.06, 0.03, t + i * 0.04);
+  }
+  // Descending sweep at end
+  for (let i = 0; i < 10; i++) {
+    scheduleTone(2000 - i * 150, t + 1.0 + i * 0.05, 0.08, 'square', 0.03);
+  }
 }
+
 function sfxCorrect() {
-  [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => playTone(f, 0.15), i * 100));
+  ensureAudio();
+  const t = audioCtx.currentTime;
+  // Triumphant fanfare - NES style
+  const melody = [523, 0, 659, 0, 784, 0, 1047, 1047, 784, 1047];
+  melody.forEach((f, i) => {
+    if (f > 0) scheduleTone(f, t + i * 0.08, 0.12, 'square', 0.05);
+  });
+  // Bass harmony
+  scheduleTone(262, t, 0.3, 'triangle', 0.07);
+  scheduleTone(330, t + 0.3, 0.3, 'triangle', 0.07);
+  scheduleTone(392, t + 0.6, 0.4, 'triangle', 0.07);
+  // Percussion
+  playNoise(0.05, 0.04, t);
+  playNoise(0.05, 0.04, t + 0.4);
+  playNoise(0.08, 0.06, t + 0.7);
 }
+
+function sfxDrumroll() {
+  ensureAudio();
+  const t = audioCtx.currentTime;
+  for (let i = 0; i < 16; i++) {
+    playNoise(0.04, 0.03 + (i / 16) * 0.03, t + i * 0.05);
+    if (i % 4 === 0) scheduleTone(80, t + i * 0.05, 0.05, 'triangle', 0.04);
+  }
+}
+
+function sfxWahWah() {
+  ensureAudio();
+  const t = audioCtx.currentTime;
+  scheduleTone(400, t, 0.3, 'sawtooth', 0.04);
+  scheduleTone(350, t + 0.3, 0.3, 'sawtooth', 0.04);
+  scheduleTone(300, t + 0.6, 0.5, 'sawtooth', 0.03);
+}
+
+function sfxAudienceGasp() {
+  ensureAudio();
+  const t = audioCtx.currentTime;
+  for (let i = 0; i < 5; i++) {
+    playNoise(0.15, 0.02, t + i * 0.03);
+    scheduleTone(300 + Math.random() * 200, t + i * 0.05, 0.1, 'sawtooth', 0.015);
+  }
+}
+
+// Title screen melody - catchy 4-channel NES loop
+let titleMusicInterval = null;
+function sfxTitleMusic() {
+  ensureAudio();
+  const t = audioCtx.currentTime;
+  const bpm = 140;
+  const beat = 60 / bpm;
+
+  // Melody (pulse 1)
+  const melody = [
+    [392, 1], [0, 0.5], [523, 0.5], [659, 1], [523, 0.5], [659, 0.5],
+    [784, 1.5], [659, 0.5], [523, 1], [392, 1],
+    [440, 1], [0, 0.5], [523, 0.5], [659, 1], [784, 0.5], [659, 0.5],
+    [523, 1.5], [440, 0.5], [392, 1], [0, 1],
+  ];
+  let time = 0;
+  melody.forEach(([f, dur]) => {
+    if (f > 0) scheduleTone(f, t + time * beat, dur * beat * 0.8, 'square', 0.04);
+    time += dur;
+  });
+
+  // Bass line (triangle)
+  const bass = [
+    [196, 2], [220, 2], [262, 2], [196, 2],
+    [220, 2], [262, 2], [196, 2], [220, 2],
+  ];
+  let bassTime = 0;
+  bass.forEach(([f, dur]) => {
+    scheduleTone(f, t + bassTime * beat, dur * beat * 0.9, 'triangle', 0.06);
+    bassTime += dur;
+  });
+
+  // Drums (noise)
+  for (let i = 0; i < 16; i++) {
+    playNoise(0.04, i % 2 === 0 ? 0.04 : 0.02, t + i * beat);
+    if (i % 4 === 0) playNoise(0.08, 0.05, t + i * beat); // kick on downbeats
+  }
+
+  const loopLength = time * beat * 1000;
+  titleMusicInterval = setTimeout(sfxTitleMusic, loopLength);
+}
+
+function stopTitleMusic() {
+  if (titleMusicInterval) { clearTimeout(titleMusicInterval); titleMusicInterval = null; }
+}
+
+// Dance party music - energetic NES loop
+let danceMusicInterval = null;
 function sfxDance() {
-  const notes = [262, 330, 392, 523, 392, 330, 262, 330, 392, 523, 659, 784];
-  notes.forEach((f, i) => setTimeout(() => playTone(f, 0.12, 'square', 0.06), i * 150));
-  setTimeout(sfxDance, notes.length * 150);
+  ensureAudio();
+  const t = audioCtx.currentTime;
+  const bpm = 160;
+  const beat = 60 / bpm;
+
+  // Melody (high energy, bouncy)
+  const melody = [
+    [523, 0.5], [659, 0.5], [784, 0.5], [1047, 0.5],
+    [784, 0.5], [659, 0.5], [784, 1],
+    [587, 0.5], [698, 0.5], [880, 0.5], [1175, 0.5],
+    [880, 0.5], [698, 0.5], [880, 1],
+    [523, 0.5], [784, 0.5], [1047, 1], [784, 0.5], [523, 0.5],
+    [659, 0.5], [784, 0.5], [1047, 0.5], [1319, 0.5], [1047, 1],
+  ];
+  let time = 0;
+  melody.forEach(([f, dur]) => {
+    scheduleTone(f, t + time * beat, dur * beat * 0.7, 'square', 0.04);
+    time += dur;
+  });
+
+  // Counter melody (pulse 2)
+  const counter = [
+    [262, 1], [330, 1], [392, 1], [523, 1],
+    [294, 1], [349, 1], [440, 1], [587, 1],
+    [262, 1], [392, 1], [523, 1], [262, 1],
+  ];
+  let cTime = 0;
+  counter.forEach(([f, dur]) => {
+    scheduleTone(f, t + cTime * beat, dur * beat * 0.6, 'square', 0.025);
+    cTime += dur;
+  });
+
+  // Bass (pumping)
+  const bass = [131, 131, 165, 165, 147, 147, 196, 196, 131, 131, 165, 165];
+  bass.forEach((f, i) => {
+    scheduleTone(f, t + i * beat, beat * 0.8, 'triangle', 0.06);
+  });
+
+  // Drums (four on the floor)
+  for (let i = 0; i < 12; i++) {
+    playNoise(0.03, 0.04, t + i * beat); // hi-hat every beat
+    if (i % 2 === 0) playNoise(0.08, 0.06, t + i * beat); // kick
+    if (i % 2 === 1) playNoise(0.05, 0.05, t + i * beat + beat * 0.5); // snare
+  }
+
+  const loopLength = time * beat * 1000;
+  danceMusicInterval = setTimeout(sfxDance, loopLength);
+}
+
+function stopDanceMusic() {
+  if (danceMusicInterval) { clearTimeout(danceMusicInterval); danceMusicInterval = null; }
+}
+
+// Question reveal jingle
+function sfxQuestionReveal() {
+  ensureAudio();
+  const t = audioCtx.currentTime;
+  scheduleTone(330, t, 0.15, 'square', 0.04);
+  scheduleTone(392, t + 0.12, 0.15, 'square', 0.04);
+  scheduleTone(440, t + 0.24, 0.15, 'square', 0.04);
+  scheduleTone(523, t + 0.36, 0.25, 'square', 0.05);
+  scheduleTone(165, t, 0.6, 'triangle', 0.05);
+  playNoise(0.06, 0.03, t);
 }
 
 // ===== PIXEL ART ALIEN HOST =====
@@ -793,6 +990,7 @@ document.addEventListener('keydown', (e) => {
       e.preventDefault();
       ensureAudio();
       sfxSelect();
+      stopTitleMusic();
       playWormhole();
       return;
     }
@@ -1135,6 +1333,7 @@ async function askQuestion() {
   }
 
   // Ask the question
+  sfxQuestionReveal();
   await showDialog("ZORGBLAX", "For " + PRIZES[currentQuestion] + "...");
   await waitForAdvance();
   await showDialog("ZORGBLAX", q.q);
@@ -1225,11 +1424,9 @@ async function selectAnswer(index) {
   await showDialog("ZORGBLAX", thinkLine);
   await sleep(2000);
 
-  // Drumroll tension (using audio)
-  for (let i = 0; i < 8; i++) {
-    setTimeout(() => playTone(100 + Math.random() * 50, 0.06, 'square', 0.04), i * 80);
-  }
-  await sleep(800);
+  // Drumroll tension
+  sfxDrumroll();
+  await sleep(900);
 
   // Always "correct"
   sfxCorrect();
@@ -1248,6 +1445,7 @@ async function selectAnswer(index) {
   await waitForAdvance();
 
   // Answer-specific reaction
+  sfxAudienceGasp();
   setAlienExpression('shocked');
   const reaction = q.reactions[index];
   await showDialog("ZORGBLAX", reaction);
@@ -1326,6 +1524,7 @@ initStars();
 document.getElementById('title-screen').addEventListener('click', () => {
   ensureAudio();
   sfxSelect();
+  stopTitleMusic();
   playWormhole();
 });
 
