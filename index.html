@@ -1,0 +1,2041 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Who Wants to Zorp A Blorginaire?</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #000;
+    margin: 0;
+    overflow: hidden;
+    font-family: 'Press Start 2P', monospace;
+    image-rendering: pixelated;
+  }
+
+  #screen {
+    width: 1024px;
+    height: 960px;
+    background: #000;
+    position: relative;
+    overflow: hidden;
+    border: 4px solid #444;
+    box-shadow: 0 0 40px rgba(0,255,100,0.15);
+    transform-origin: top left;
+  }
+
+  /* Scanline overlay */
+  #screen::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      rgba(0,0,0,0.15) 0px,
+      rgba(0,0,0,0.15) 1px,
+      transparent 1px,
+      transparent 2px
+    );
+    pointer-events: none;
+    z-index: 999;
+  }
+
+  .scene { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+  .scene.active { display: block; }
+
+  /* ===== TITLE SCREEN ===== */
+  #title-screen {
+    background: #000;
+    text-align: center;
+  }
+  #title-screen .stars {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  }
+  #title-screen h1 {
+    color: #5eff3e;
+    font-size: 20px;
+    margin-top: 130px;
+    line-height: 2.2;
+    text-shadow: 2px 2px #005500;
+    position: relative;
+    z-index: 2;
+  }
+  #title-screen h1 .big {
+    font-size: 32px;
+    color: #ffec27;
+    display: block;
+    margin: 20px 0;
+    text-shadow: 3px 3px #886600;
+  }
+  #title-screen .press-start {
+    color: #fff;
+    font-size: 18px;
+    margin-top: 120px;
+    animation: blink 1s infinite;
+    position: relative;
+    z-index: 2;
+  }
+  @keyframes blink { 0%,49%{opacity:1} 50%,100%{opacity:0} }
+
+  #title-screen .alien-title {
+    font-size: 100px;
+    display: block;
+    margin: 30px 0;
+    position: relative;
+    z-index: 2;
+  }
+
+  /* ===== WORMHOLE SEQUENCE ===== */
+  #wormhole-screen {
+    background: #000;
+    position: relative;
+  }
+  #wormhole-canvas {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    image-rendering: pixelated;
+  }
+  #wormhole-text {
+    position: absolute;
+    bottom: 60px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+    color: #fff;
+    font-size: 14px;
+    text-align: center;
+    line-height: 2.5;
+    opacity: 0;
+    transition: opacity 0.5s;
+    background: rgba(0, 0, 0, 0.75);
+    border: 3px solid #29adff;
+    padding: 20px 32px;
+    max-width: 85%;
+    white-space: nowrap;
+  }
+  #wormhole-text.visible { opacity: 1; }
+
+  /* Screen shake */
+  @keyframes screen-shake {
+    0%,100% { transform: translate(0,0); }
+    10% { transform: translate(-4px, 3px); }
+    20% { transform: translate(3px, -4px); }
+    30% { transform: translate(-3px, -2px); }
+    40% { transform: translate(4px, 3px); }
+    50% { transform: translate(-2px, 4px); }
+    60% { transform: translate(3px, -3px); }
+    70% { transform: translate(-4px, 2px); }
+    80% { transform: translate(2px, -4px); }
+    90% { transform: translate(-3px, 3px); }
+  }
+  #screen.shake { animation: screen-shake 0.4s ease-out; }
+
+  /* Iris transition overlay */
+  #iris-overlay {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    z-index: 500;
+    pointer-events: none;
+    display: none;
+  }
+
+  /* ===== STAGE / GAME SCREEN ===== */
+  #game-screen {
+    background: #0a0015;
+  }
+  #stage-canvas {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    image-rendering: pixelated;
+    z-index: 0;
+  }
+  /* Particle canvas for sparkles/confetti */
+  #particle-canvas {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 11;
+  }
+  /* CRT overlay effect */
+  #crt-overlay {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 998;
+    background:
+      repeating-linear-gradient(0deg, rgba(0,0,0,0.12) 0px, rgba(0,0,0,0.12) 1px, transparent 1px, transparent 2px),
+      radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,0.4) 100%);
+  }
+
+  /* Alien host */
+  .alien-host {
+    position: absolute;
+    top: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    text-align: center;
+    z-index: 5;
+  }
+  #alien-canvas {
+    image-rendering: pixelated;
+    width: 256px;
+    height: 320px;
+    animation: alien-bob 1s ease-in-out infinite alternate;
+  }
+  @keyframes alien-bob {
+    0% { transform: translateY(0); }
+    100% { transform: translateY(-5px); }
+  }
+  @keyframes alien-jump {
+    0% { transform: translateY(0); }
+    50% { transform: translateY(-20px) scale(1.1); }
+    100% { transform: translateY(0); }
+  }
+  .alien-name {
+    color: #5eff3e;
+    font-size: 11px;
+    margin-top: 6px;
+  }
+
+  /* Dialog box */
+  .dialog-box {
+    position: absolute;
+    bottom: 260px;
+    left: 24px;
+    right: 24px;
+    background: #111;
+    border: 3px solid #5eff3e;
+    padding: 16px 18px;
+    color: #fff;
+    font-size: 14px;
+    line-height: 2;
+    min-height: 90px;
+    z-index: 10;
+  }
+  .dialog-box .speaker {
+    color: #5eff3e;
+    margin-bottom: 8px;
+  }
+  .dialog-box .continue-prompt {
+    color: #ffec27;
+    font-size: 11px;
+    text-align: right;
+    margin-top: 6px;
+    animation: blink 0.6s infinite;
+  }
+
+  /* Audience speech bubble */
+  .audience-bubble {
+    position: absolute;
+    bottom: 10px;
+    background: #222;
+    border: 2px solid #ff6ee6;
+    color: #ff6ee6;
+    font-size: 11px;
+    padding: 10px 16px;
+    line-height: 1.8;
+    z-index: 8;
+    opacity: 0;
+    transition: opacity 0.3s;
+    white-space: nowrap;
+  }
+  .audience-bubble.visible { opacity: 1; }
+  .audience-bubble::after {
+    content: '';
+    position: absolute;
+    bottom: -6px;
+    left: 20px;
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-top: 6px solid #ff6ee6;
+  }
+
+  /* Answer choices */
+  .choices {
+    position: absolute;
+    bottom: 260px;
+    left: 24px;
+    right: 24px;
+    z-index: 10;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .choice-btn {
+    background: #1a0044;
+    border: 2px solid #7744aa;
+    color: #fff;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 12px;
+    padding: 16px 14px;
+    cursor: pointer;
+    text-align: left;
+    line-height: 1.8;
+    transition: background 0.1s, border-color 0.1s;
+  }
+  .choice-btn:hover {
+    background: #330066;
+    border-color: #ffec27;
+    color: #ffec27;
+  }
+  .choice-btn .choice-label {
+    color: #ffec27;
+  }
+
+  /* Question counter / prize ladder */
+  .hud-left {
+    position: absolute;
+    top: 440px;
+    left: 12px;
+    color: #ff6ee6;
+    font-size: 14px;
+    z-index: 10;
+    line-height: 2;
+    max-width: 420px;
+    text-shadow: 0 0 6px #000, 0 0 12px #000, 2px 2px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000;
+  }
+
+  /* Prize ladder */
+  .prize-ladder {
+    position: absolute;
+    top: 50px;
+    bottom: 420px;
+    right: 8px;
+    z-index: 10;
+    display: flex;
+    flex-direction: column-reverse;
+    justify-content: flex-start;
+    gap: 1px;
+    overflow: hidden;
+  }
+  .prize-step {
+    font-size: 10px;
+    color: #555;
+    padding: 2px 6px;
+    text-align: right;
+    transition: all 0.3s;
+    max-width: 300px;
+    line-height: 1.5;
+    text-shadow: 0 0 4px #000, 2px 2px 0 #000, -1px -1px 0 #000;
+  }
+  .prize-step.active {
+    color: #ffec27;
+    text-shadow: 0 0 6px #ffec27, 0 0 4px #000, 2px 2px 0 #000;
+  }
+  .prize-step.won {
+    color: #5eff3e;
+    text-shadow: 0 0 4px #000, 2px 2px 0 #000, -1px -1px 0 #000;
+  }
+
+  /* Keyboard selected choice */
+  .choice-btn.kb-selected {
+    background: #330066;
+    border-color: #ffec27;
+    color: #ffec27;
+    box-shadow: 0 0 8px rgba(255, 236, 39, 0.4);
+  }
+  .choice-btn.locked {
+    background: #ffec27;
+    color: #000;
+    border-color: #fff;
+    animation: lock-flash 0.15s infinite alternate;
+  }
+  @keyframes lock-flash {
+    0% { opacity: 0.7; } 100% { opacity: 1; }
+  }
+
+  /* Dramatic dim overlay */
+  .dim-overlay {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.6);
+    z-index: 9;
+    opacity: 0;
+    transition: opacity 0.5s;
+    pointer-events: none;
+  }
+  .dim-overlay.active { opacity: 1; }
+
+  /* ===== DANCE PARTY ===== */
+  #dance-screen {
+    text-align: center;
+    overflow: hidden;
+    background: #000;
+  }
+  #dance-canvas {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    image-rendering: pixelated;
+    z-index: 10;
+  }
+  .dance-text {
+    position: absolute;
+    top: 30px;
+    width: 100%;
+    font-size: 22px;
+    z-index: 20;
+    text-shadow: 3px 3px #000;
+    animation: dance-bounce 0.4s infinite alternate;
+    line-height: 2.8;
+  }
+  @keyframes dance-bounce {
+    0% { transform: translateY(0) scale(1); }
+    100% { transform: translateY(-6px) scale(1.05); }
+  }
+
+  .zorpbuck-counter {
+    position: absolute;
+    top: 140px;
+    width: 100%;
+    color: #ffec27;
+    font-size: 16px;
+    z-index: 20;
+    text-shadow: 3px 3px #000;
+  }
+
+  .credits {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    color: #aaa;
+    font-size: 11px;
+    line-height: 2.5;
+    z-index: 20;
+    animation: credits-scroll 20s linear infinite;
+    text-shadow: 0 0 6px #000, 0 0 12px #000, 2px 2px 0 #000, -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 0 2px 0 #000, 0 -2px 0 #000, 2px 0 0 #000, -2px 0 0 #000;
+  }
+  @keyframes credits-scroll {
+    0% { transform: translateY(960px); }
+    100% { transform: translateY(-900px); }
+  }
+
+  .play-again-btn {
+    position: absolute;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1a0044;
+    border: 3px solid #5eff3e;
+    color: #5eff3e;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 16px;
+    padding: 18px 36px;
+    cursor: pointer;
+    z-index: 30;
+    animation: blink 1s infinite;
+  }
+  .play-again-btn:hover {
+    background: #330066;
+    color: #ffec27;
+    border-color: #ffec27;
+  }
+</style>
+</head>
+<body>
+
+<div id="screen">
+
+  <!-- TITLE SCREEN -->
+  <div id="title-screen" class="scene active">
+    <canvas class="stars" id="stars-canvas"></canvas>
+    <h1>
+      WELCOME TO
+      <span class="big">WHO WANTS TO ZORP</span>
+      <span class="big">A BLORGINAIRE?</span>
+    </h1>
+    <div class="alien-title">&#x1F47E;</div>
+    <div class="press-start">&#x25B6; PRESS START &#x25C0;</div>
+  </div>
+
+  <!-- WORMHOLE SEQUENCE -->
+  <div id="wormhole-screen" class="scene">
+    <canvas id="wormhole-canvas" width="256" height="240"></canvas>
+    <div id="wormhole-text"></div>
+  </div>
+
+  <!-- Iris transition overlay (used between all scenes) -->
+  <canvas id="iris-overlay" width="1024" height="960"></canvas>
+
+  <!-- GAME SCREEN -->
+  <div id="game-screen" class="scene">
+    <canvas id="stage-canvas" width="256" height="240"></canvas>
+    <canvas id="particle-canvas" width="1024" height="960"></canvas>
+    <div class="dim-overlay" id="dim-overlay"></div>
+    <div class="hud-left" id="hud-left"></div>
+    <div class="prize-ladder" id="prize-ladder"></div>
+    <div class="alien-host">
+      <canvas id="alien-canvas" width="64" height="80"></canvas>
+      <div class="alien-name">ZORGBLAX THE MAGNIFICENT</div>
+    </div>
+    <div class="dialog-box" id="dialog-box" style="display:none;">
+      <div class="speaker" id="dialog-speaker"></div>
+      <div id="dialog-text"></div>
+      <div class="continue-prompt" style="display:none;">&#x25BC; CLICK or PRESS SPACE</div>
+    </div>
+    <div class="choices" id="choices" style="display:none;"></div>
+    <div class="audience-bubble" id="audience-bubble"></div>
+  </div>
+
+  <!-- DANCE PARTY -->
+  <div id="dance-screen" class="scene">
+    <canvas id="dance-canvas" width="256" height="240"></canvas>
+    <div class="dance-text" id="dance-text"></div>
+    <div class="zorpbuck-counter" id="zorpbuck-counter"></div>
+    <div class="credits" id="credits"></div>
+    <button class="play-again-btn" id="play-again-btn" style="display:none;">PLAY AGAIN</button>
+  </div>
+
+  <div id="crt-overlay"></div>
+</div>
+
+<script>
+// ===== AUDIO ENGINE =====
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let audioCtx;
+function ensureAudio() {
+  if (!audioCtx) audioCtx = new AudioCtx();
+}
+
+function playTone(freq, duration, type = 'square', volume = 0.08) {
+  ensureAudio();
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = type;
+  osc.frequency.value = freq;
+  gain.gain.value = volume;
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.start();
+  osc.stop(audioCtx.currentTime + duration);
+}
+
+// Schedule a tone at a specific audioCtx time (for tight musical timing)
+function scheduleTone(freq, startTime, duration, type = 'square', volume = 0.06) {
+  ensureAudio();
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = type;
+  osc.frequency.value = freq;
+  gain.gain.setValueAtTime(volume, startTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.start(startTime);
+  osc.stop(startTime + duration);
+}
+
+// Noise generator for drums
+function playNoise(duration, volume = 0.05, startTime = null) {
+  ensureAudio();
+  const bufferSize = audioCtx.sampleRate * duration;
+  const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+  const src = audioCtx.createBufferSource();
+  src.buffer = buffer;
+  const gain = audioCtx.createGain();
+  const t = startTime || audioCtx.currentTime;
+  gain.gain.setValueAtTime(volume, t);
+  gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
+  src.connect(gain);
+  gain.connect(audioCtx.destination);
+  src.start(t);
+}
+
+function sfxSelect() {
+  ensureAudio();
+  const t = audioCtx.currentTime;
+  scheduleTone(600, t, 0.06);
+  scheduleTone(900, t + 0.06, 0.1);
+}
+
+function sfxWarp() {
+  ensureAudio();
+  const t = audioCtx.currentTime;
+  for (let i = 0; i < 24; i++) {
+    scheduleTone(200 + i * 80, t + i * 0.04, 0.1, 'sawtooth', 0.03);
+    if (i % 3 === 0) playNoise(0.06, 0.03, t + i * 0.04);
+  }
+  // Descending sweep at end
+  for (let i = 0; i < 10; i++) {
+    scheduleTone(2000 - i * 150, t + 1.0 + i * 0.05, 0.08, 'square', 0.03);
+  }
+}
+
+function sfxCorrect() {
+  ensureAudio();
+  const t = audioCtx.currentTime;
+  // Triumphant fanfare - NES style
+  const melody = [523, 0, 659, 0, 784, 0, 1047, 1047, 784, 1047];
+  melody.forEach((f, i) => {
+    if (f > 0) scheduleTone(f, t + i * 0.08, 0.12, 'square', 0.05);
+  });
+  // Bass harmony
+  scheduleTone(262, t, 0.3, 'triangle', 0.07);
+  scheduleTone(330, t + 0.3, 0.3, 'triangle', 0.07);
+  scheduleTone(392, t + 0.6, 0.4, 'triangle', 0.07);
+  // Percussion
+  playNoise(0.05, 0.04, t);
+  playNoise(0.05, 0.04, t + 0.4);
+  playNoise(0.08, 0.06, t + 0.7);
+}
+
+function sfxDrumroll() {
+  ensureAudio();
+  const t = audioCtx.currentTime;
+  for (let i = 0; i < 16; i++) {
+    playNoise(0.04, 0.03 + (i / 16) * 0.03, t + i * 0.05);
+    if (i % 4 === 0) scheduleTone(80, t + i * 0.05, 0.05, 'triangle', 0.04);
+  }
+}
+
+function sfxWahWah() {
+  ensureAudio();
+  const t = audioCtx.currentTime;
+  scheduleTone(400, t, 0.3, 'sawtooth', 0.04);
+  scheduleTone(350, t + 0.3, 0.3, 'sawtooth', 0.04);
+  scheduleTone(300, t + 0.6, 0.5, 'sawtooth', 0.03);
+}
+
+function sfxAudienceGasp() {
+  ensureAudio();
+  const t = audioCtx.currentTime;
+  for (let i = 0; i < 5; i++) {
+    playNoise(0.15, 0.02, t + i * 0.03);
+    scheduleTone(300 + Math.random() * 200, t + i * 0.05, 0.1, 'sawtooth', 0.015);
+  }
+}
+
+// Title screen melody - catchy 4-channel NES loop
+let titleMusicInterval = null;
+function sfxTitleMusic() {
+  ensureAudio();
+  const t = audioCtx.currentTime;
+  const bpm = 140;
+  const beat = 60 / bpm;
+
+  // Melody (pulse 1)
+  const melody = [
+    [392, 1], [0, 0.5], [523, 0.5], [659, 1], [523, 0.5], [659, 0.5],
+    [784, 1.5], [659, 0.5], [523, 1], [392, 1],
+    [440, 1], [0, 0.5], [523, 0.5], [659, 1], [784, 0.5], [659, 0.5],
+    [523, 1.5], [440, 0.5], [392, 1], [0, 1],
+  ];
+  let time = 0;
+  melody.forEach(([f, dur]) => {
+    if (f > 0) scheduleTone(f, t + time * beat, dur * beat * 0.8, 'square', 0.04);
+    time += dur;
+  });
+
+  // Bass line (triangle)
+  const bass = [
+    [196, 2], [220, 2], [262, 2], [196, 2],
+    [220, 2], [262, 2], [196, 2], [220, 2],
+  ];
+  let bassTime = 0;
+  bass.forEach(([f, dur]) => {
+    scheduleTone(f, t + bassTime * beat, dur * beat * 0.9, 'triangle', 0.06);
+    bassTime += dur;
+  });
+
+  // Drums (noise)
+  for (let i = 0; i < 16; i++) {
+    playNoise(0.04, i % 2 === 0 ? 0.04 : 0.02, t + i * beat);
+    if (i % 4 === 0) playNoise(0.08, 0.05, t + i * beat); // kick on downbeats
+  }
+
+  const loopLength = time * beat * 1000;
+  titleMusicInterval = setTimeout(sfxTitleMusic, loopLength);
+}
+
+function stopTitleMusic() {
+  if (titleMusicInterval) { clearTimeout(titleMusicInterval); titleMusicInterval = null; }
+}
+
+// Dance party music - energetic NES loop
+let danceMusicInterval = null;
+function sfxDance() {
+  ensureAudio();
+  const t = audioCtx.currentTime;
+  const bpm = 160;
+  const beat = 60 / bpm;
+
+  // Melody (high energy, bouncy)
+  const melody = [
+    [523, 0.5], [659, 0.5], [784, 0.5], [1047, 0.5],
+    [784, 0.5], [659, 0.5], [784, 1],
+    [587, 0.5], [698, 0.5], [880, 0.5], [1175, 0.5],
+    [880, 0.5], [698, 0.5], [880, 1],
+    [523, 0.5], [784, 0.5], [1047, 1], [784, 0.5], [523, 0.5],
+    [659, 0.5], [784, 0.5], [1047, 0.5], [1319, 0.5], [1047, 1],
+  ];
+  let time = 0;
+  melody.forEach(([f, dur]) => {
+    scheduleTone(f, t + time * beat, dur * beat * 0.7, 'square', 0.04);
+    time += dur;
+  });
+
+  // Counter melody (pulse 2)
+  const counter = [
+    [262, 1], [330, 1], [392, 1], [523, 1],
+    [294, 1], [349, 1], [440, 1], [587, 1],
+    [262, 1], [392, 1], [523, 1], [262, 1],
+  ];
+  let cTime = 0;
+  counter.forEach(([f, dur]) => {
+    scheduleTone(f, t + cTime * beat, dur * beat * 0.6, 'square', 0.025);
+    cTime += dur;
+  });
+
+  // Bass (pumping)
+  const bass = [131, 131, 165, 165, 147, 147, 196, 196, 131, 131, 165, 165];
+  bass.forEach((f, i) => {
+    scheduleTone(f, t + i * beat, beat * 0.8, 'triangle', 0.06);
+  });
+
+  // Drums (four on the floor)
+  for (let i = 0; i < 12; i++) {
+    playNoise(0.03, 0.04, t + i * beat); // hi-hat every beat
+    if (i % 2 === 0) playNoise(0.08, 0.06, t + i * beat); // kick
+    if (i % 2 === 1) playNoise(0.05, 0.05, t + i * beat + beat * 0.5); // snare
+  }
+
+  const loopLength = time * beat * 1000;
+  danceMusicInterval = setTimeout(sfxDance, loopLength);
+}
+
+function stopDanceMusic() {
+  if (danceMusicInterval) { clearTimeout(danceMusicInterval); danceMusicInterval = null; }
+}
+
+// Question reveal jingle
+function sfxQuestionReveal() {
+  ensureAudio();
+  const t = audioCtx.currentTime;
+  scheduleTone(330, t, 0.15, 'square', 0.04);
+  scheduleTone(392, t + 0.12, 0.15, 'square', 0.04);
+  scheduleTone(440, t + 0.24, 0.15, 'square', 0.04);
+  scheduleTone(523, t + 0.36, 0.25, 'square', 0.05);
+  scheduleTone(165, t, 0.6, 'triangle', 0.05);
+  playNoise(0.06, 0.03, t);
+}
+
+// ===== PIXEL ART ALIEN HOST =====
+const alienCanvas = document.getElementById('alien-canvas');
+const alienCtx = alienCanvas ? alienCanvas.getContext('2d') : null;
+
+// Draw a pixel at scale (each "pixel" = 4x4 real pixels on the 64x80 canvas)
+const PX = 4;
+function apx(x, y, color) {
+  if (!alienCtx) return;
+  alienCtx.fillStyle = color;
+  alienCtx.fillRect(x * PX, y * PX, PX, PX);
+}
+
+// Color palette
+const AC = {
+  skin: '#5eff3e',
+  skinDark: '#29a81e',
+  skinLight: '#9fff8e',
+  eye: '#fff',
+  pupil: '#111',
+  pupilAlt: '#ff004d',
+  mouth: '#1a0033',
+  teeth: '#ffec27',
+  antenna: '#29adff',
+  antennaGlow: '#fff',
+  suit: '#7e2553',
+  suitLight: '#a8437a',
+  podium: '#2d004d',
+  podiumLight: '#4d0080',
+  podiumTrim: '#ffec27',
+};
+
+function drawAlien(expression = 'neutral') {
+  if (!alienCtx) return;
+  alienCtx.clearRect(0, 0, 64, 80);
+
+  // Antenna stalks
+  apx(6, 0, AC.antenna); apx(9, 0, AC.antenna);
+  apx(6, 1, AC.antenna); apx(9, 1, AC.antenna);
+  apx(6, 2, AC.antenna); apx(9, 2, AC.antenna);
+
+  // Antenna tips (glow)
+  const glowFrame = Math.floor(Date.now() / 300) % 2;
+  const glowColor = glowFrame ? AC.antennaGlow : AC.antenna;
+  apx(5, 0, glowColor); apx(10, 0, glowColor);
+
+  // Head (rows 3-9, cols 3-12)
+  for (let y = 3; y <= 9; y++) {
+    for (let x = 3; x <= 12; x++) {
+      if (y === 3 && (x === 3 || x === 12)) continue; // rounded corners
+      if (y === 9 && (x === 3 || x === 12)) continue;
+      apx(x, y, AC.skin);
+    }
+  }
+  // Head highlights
+  apx(4, 4, AC.skinLight); apx(5, 3, AC.skinLight);
+
+  // Eyes (change based on expression)
+  const eyeL = { x: 5, y: 5 };
+  const eyeR = { x: 9, y: 5 };
+
+  if (expression === 'neutral' || expression === 'thinking') {
+    // Normal eyes - white with dark pupil
+    apx(eyeL.x, eyeL.y, AC.eye); apx(eyeL.x + 1, eyeL.y, AC.eye);
+    apx(eyeR.x, eyeR.y, AC.eye); apx(eyeR.x + 1, eyeR.y, AC.eye);
+    apx(eyeL.x + 1, eyeL.y, AC.pupil);
+    apx(eyeR.x + 1, eyeR.y, AC.pupil);
+    if (expression === 'thinking') {
+      // One eye squinted (smaller)
+      apx(eyeR.x, eyeR.y, AC.skin); apx(eyeR.x + 1, eyeR.y, AC.skinDark);
+    }
+  } else if (expression === 'excited' || expression === 'celebrating') {
+    // Big sparkly eyes
+    apx(eyeL.x, eyeL.y, AC.eye); apx(eyeL.x + 1, eyeL.y, AC.eye);
+    apx(eyeL.x, eyeL.y + 1, AC.eye); apx(eyeL.x + 1, eyeL.y + 1, AC.eye);
+    apx(eyeR.x, eyeR.y, AC.eye); apx(eyeR.x + 1, eyeR.y, AC.eye);
+    apx(eyeR.x, eyeR.y + 1, AC.eye); apx(eyeR.x + 1, eyeR.y + 1, AC.eye);
+    // Star pupils
+    apx(eyeL.x, eyeL.y, AC.pupilAlt);
+    apx(eyeR.x + 1, eyeR.y, AC.pupilAlt);
+  } else if (expression === 'shocked') {
+    // Wide eyes
+    apx(eyeL.x, eyeL.y, AC.eye); apx(eyeL.x + 1, eyeL.y, AC.eye);
+    apx(eyeL.x, eyeL.y + 1, AC.eye); apx(eyeL.x + 1, eyeL.y + 1, AC.eye);
+    apx(eyeR.x, eyeR.y, AC.eye); apx(eyeR.x + 1, eyeR.y, AC.eye);
+    apx(eyeR.x, eyeR.y + 1, AC.eye); apx(eyeR.x + 1, eyeR.y + 1, AC.eye);
+    // Tiny pupils
+    apx(eyeL.x + 1, eyeL.y + 1, AC.pupil);
+    apx(eyeR.x, eyeR.y + 1, AC.pupil);
+  } else if (expression === 'suspicious') {
+    // Narrowed eyes
+    apx(eyeL.x, eyeL.y, AC.skinDark); apx(eyeL.x + 1, eyeL.y, AC.eye);
+    apx(eyeR.x, eyeR.y, AC.eye); apx(eyeR.x + 1, eyeR.y, AC.skinDark);
+    apx(eyeL.x + 1, eyeL.y, AC.pupil);
+    apx(eyeR.x, eyeR.y, AC.pupil);
+  }
+
+  // Mouth (changes per expression)
+  if (expression === 'neutral' || expression === 'thinking' || expression === 'suspicious') {
+    apx(6, 8, AC.mouth); apx(7, 8, AC.mouth); apx(8, 8, AC.mouth); apx(9, 8, AC.mouth);
+  } else if (expression === 'excited' || expression === 'celebrating') {
+    // Big open grin
+    apx(5, 8, AC.mouth); apx(6, 8, AC.mouth); apx(7, 8, AC.mouth);
+    apx(8, 8, AC.mouth); apx(9, 8, AC.mouth); apx(10, 8, AC.mouth);
+    apx(6, 7, AC.teeth); apx(7, 7, AC.teeth); apx(8, 7, AC.teeth); apx(9, 7, AC.teeth);
+  } else if (expression === 'shocked') {
+    // O mouth
+    apx(7, 7, AC.mouth); apx(8, 7, AC.mouth);
+    apx(7, 8, AC.mouth); apx(8, 8, AC.mouth);
+  }
+
+  // Body / suit (rows 10-14)
+  for (let y = 10; y <= 14; y++) {
+    for (let x = 4; x <= 11; x++) {
+      if (y === 10 && (x === 4 || x === 11)) continue;
+      apx(x, y, AC.suit);
+    }
+  }
+  // Suit collar
+  apx(6, 10, AC.suitLight); apx(7, 10, AC.suitLight); apx(8, 10, AC.suitLight); apx(9, 10, AC.suitLight);
+  // Suit buttons
+  apx(7, 12, AC.teeth); apx(8, 12, AC.teeth);
+
+  // Arms
+  apx(3, 11, AC.skin); apx(3, 12, AC.skin); apx(2, 12, AC.skin);
+  apx(12, 11, AC.skin); apx(12, 12, AC.skin); apx(13, 12, AC.skin);
+
+  // Celebrating: arms up!
+  if (expression === 'celebrating') {
+    apx(3, 11, AC.skin); apx(2, 10, AC.skin); apx(1, 9, AC.skin);
+    apx(12, 11, AC.skin); apx(13, 10, AC.skin); apx(14, 9, AC.skin);
+  }
+
+  // Podium (rows 15-19)
+  for (let y = 15; y <= 19; y++) {
+    for (let x = 1; x <= 14; x++) {
+      apx(x, y, AC.podium);
+    }
+  }
+  // Podium trim
+  for (let x = 1; x <= 14; x++) apx(x, 15, AC.podiumTrim);
+  // Podium logo (Z)
+  apx(6, 17, AC.podiumLight); apx(7, 17, AC.podiumLight); apx(8, 17, AC.podiumLight); apx(9, 17, AC.podiumLight);
+  apx(8, 18, AC.podiumLight);
+  apx(6, 19, AC.podiumLight); apx(7, 19, AC.podiumLight); apx(8, 19, AC.podiumLight); apx(9, 19, AC.podiumLight);
+}
+
+let alienExpression = 'neutral';
+let alienAnimFrame = 0;
+function setAlienExpression(expr) {
+  alienExpression = expr;
+  drawAlien(expr);
+  // Jump animation for exciting moments
+  if (expr === 'celebrating' || expr === 'excited') {
+    const c = document.getElementById('alien-canvas');
+    if (c) { c.style.animation = 'alien-jump 0.4s ease-out'; setTimeout(() => c.style.animation = 'alien-bob 1s ease-in-out infinite alternate', 400); }
+  }
+}
+
+// Animate antenna glow
+setInterval(() => { if (alienCanvas) drawAlien(alienExpression); }, 300);
+
+// ===== STARFIELD =====
+function initStars() {
+  const canvas = document.getElementById('stars-canvas');
+  const ctx = canvas.getContext('2d');
+  canvas.width = 1024;
+  canvas.height = 960;
+  const stars = Array.from({ length: 120 }, () => ({
+    x: Math.random() * 1024, y: Math.random() * 960,
+    s: Math.random() * 2 + 1, speed: Math.random() * 0.5 + 0.2
+  }));
+  function draw() {
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, 1024, 960);
+    stars.forEach(s => {
+      ctx.fillStyle = `hsl(${Math.random() * 60 + 100}, 80%, ${60 + Math.random() * 40}%)`;
+      ctx.fillRect(s.x, s.y, s.s, s.s);
+      s.y += s.speed;
+      if (s.y > 960) { s.y = 0; s.x = Math.random() * 1024; }
+    });
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+// ===== SCENE MANAGEMENT =====
+function showScene(id) {
+  document.querySelectorAll('.scene').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+// ===== TYPEWRITER =====
+let typewriterSkip = false;
+let typewriterResolve = null;
+
+function typeText(el, text, speed = 35) {
+  return new Promise(resolve => {
+    el.textContent = '';
+    typewriterSkip = false;
+    typewriterResolve = null;
+    let i = 0;
+    const interval = setInterval(() => {
+      if (typewriterSkip) {
+        el.textContent = text;
+        clearInterval(interval);
+        typewriterSkip = false;
+        resolve();
+        return;
+      }
+      el.textContent += text[i];
+      if (i % 2 === 0) playTone(440 + Math.random() * 100, 0.03, 'square', 0.03);
+      i++;
+      if (i >= text.length) { clearInterval(interval); resolve(); }
+    }, speed);
+  });
+}
+
+// Click/key to advance dialog
+let waitingForAdvance = false;
+function waitForAdvance() {
+  return new Promise(resolve => {
+    waitingForAdvance = true;
+    typewriterResolve = resolve;
+    // Show continue prompt
+    const prompt = document.querySelector('.continue-prompt');
+    if (prompt) prompt.style.display = 'block';
+  });
+}
+
+document.addEventListener('click', (e) => {
+  if (e.target.closest('.choice-btn') || e.target.closest('.play-again-btn') || e.target.closest('#title-screen')) return;
+  if (waitingForAdvance && typewriterResolve) {
+    waitingForAdvance = false;
+    const prompt = document.querySelector('.continue-prompt');
+    if (prompt) prompt.style.display = 'none';
+    sfxSelect();
+    typewriterResolve();
+    typewriterResolve = null;
+  } else {
+    typewriterSkip = true;
+  }
+});
+
+document.addEventListener('keydown', (e) => {
+  // Arrow keys for choice navigation
+  if (choicesActive) {
+    const btns = document.querySelectorAll('.choice-btn');
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+      e.preventDefault();
+      playTone(300, 0.03, 'square', 0.04);
+      highlightChoice((selectedChoice + 1) % 4);
+    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      playTone(300, 0.03, 'square', 0.04);
+      highlightChoice((selectedChoice + 3) % 4);
+    } else if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      confirmAnswer(selectedChoice);
+    }
+    // A/B/C/D direct select
+    const letterMap = { 'a': 0, 'b': 1, 'c': 2, 'd': 3, '1': 0, '2': 1, '3': 2, '4': 3 };
+    if (letterMap[e.key.toLowerCase()] !== undefined) {
+      e.preventDefault();
+      confirmAnswer(letterMap[e.key.toLowerCase()]);
+    }
+    return;
+  }
+
+  if (e.key === 'Enter' || e.key === ' ') {
+    // Title screen start
+    const title = document.getElementById('title-screen');
+    if (title.classList.contains('active')) {
+      e.preventDefault();
+      ensureAudio();
+      sfxSelect();
+      stopTitleMusic();
+      playWormhole();
+      return;
+    }
+    // Dialog advance
+    if (waitingForAdvance && typewriterResolve) {
+      e.preventDefault();
+      waitingForAdvance = false;
+      const prompt = document.querySelector('.continue-prompt');
+      if (prompt) prompt.style.display = 'none';
+      sfxSelect();
+      typewriterResolve();
+      typewriterResolve = null;
+    } else {
+      typewriterSkip = true;
+    }
+  }
+});
+
+// ===== SCREEN SHAKE =====
+function screenShake() {
+  const screen = document.getElementById('screen');
+  screen.classList.add('shake');
+  setTimeout(() => screen.classList.remove('shake'), 400);
+}
+
+// ===== IRIS WIPE TRANSITION =====
+function irisWipe(closing = true, duration = 600) {
+  return new Promise(resolve => {
+    const canvas = document.getElementById('iris-overlay');
+    const ctx = canvas.getContext('2d');
+    canvas.style.display = 'block';
+    const cx = 512, cy = 480;
+    const maxR = Math.sqrt(cx * cx + cy * cy);
+    const startTime = Date.now();
+
+    function draw() {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      ctx.clearRect(0, 0, 1024, 960);
+
+      const radius = closing
+        ? maxR * (1 - progress)
+        : maxR * progress;
+
+      ctx.fillStyle = '#000';
+      ctx.fillRect(0, 0, 1024, 960);
+      ctx.globalCompositeOperation = 'destination-out';
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalCompositeOperation = 'source-over';
+
+      if (progress < 1) {
+        requestAnimationFrame(draw);
+      } else {
+        if (!closing) canvas.style.display = 'none';
+        resolve();
+      }
+    }
+    draw();
+  });
+}
+
+// ===== WORMHOLE SEQUENCE =====
+let wormholeActive = false;
+
+function drawWormholeTunnel(ctx, w, h, time, speed) {
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, w, h);
+  const cx = w / 2, cy = h / 2;
+  const colors = ['#5eff3e', '#ffec27', '#ff6ee6', '#29adff', '#ff004d', '#ff77a8'];
+
+  // Tunnel rings
+  for (let i = 20; i >= 0; i--) {
+    const depth = (i + time * speed * 3) % 20;
+    const scale = 1 / (depth * 0.15 + 0.3);
+    const radius = 120 * scale;
+    const alpha = Math.max(0, 1 - depth / 20);
+    const colorIdx = (i + Math.floor(time * 2)) % colors.length;
+
+    ctx.strokeStyle = colors[colorIdx];
+    ctx.globalAlpha = alpha * 0.8;
+    ctx.lineWidth = Math.max(1, 3 * scale);
+    ctx.beginPath();
+
+    // Wobbly ellipse
+    const wobble = Math.sin(time * 3 + i * 0.5) * 10 * scale;
+    const wobble2 = Math.cos(time * 2.5 + i * 0.7) * 8 * scale;
+    ctx.ellipse(cx + wobble, cy + wobble2, radius, radius * 0.7, time * 0.5 + i * 0.2, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  // Pixel star streaks
+  ctx.globalAlpha = 1;
+  for (let i = 0; i < 30; i++) {
+    const angle = (i / 30) * Math.PI * 2 + time;
+    const dist = ((time * 80 + i * 37) % 120);
+    const sx = cx + Math.cos(angle) * dist;
+    const sy = cy + Math.sin(angle) * dist * 0.7;
+    const size = 1 + dist / 40;
+    ctx.fillStyle = colors[i % colors.length];
+    ctx.fillRect(sx, sy, size, size);
+  }
+
+  // Tiny player sprite tumbling through
+  const playerY = cy + Math.sin(time * 5) * 15;
+  const playerX = cx + Math.cos(time * 3) * 10;
+  ctx.save();
+  ctx.translate(playerX, playerY);
+  ctx.rotate(time * 4);
+  // Simple pixel human: head + body
+  ctx.fillStyle = '#ffd4a3';
+  ctx.fillRect(-2, -6, 4, 4); // head
+  ctx.fillStyle = '#29adff';
+  ctx.fillRect(-2, -2, 4, 6); // body
+  ctx.fillStyle = '#ffd4a3';
+  ctx.fillRect(-4, 0, 2, 4); // left arm
+  ctx.fillRect(2, 0, 2, 4); // right arm
+  ctx.fillStyle = '#1a0033';
+  ctx.fillRect(-2, 4, 2, 3); // left leg
+  ctx.fillRect(0, 4, 2, 3); // right leg
+  ctx.restore();
+}
+
+async function playWormhole() {
+  showScene('wormhole-screen');
+  sfxWarp();
+
+  const canvas = document.getElementById('wormhole-canvas');
+  const ctx = canvas.getContext('2d');
+  wormholeActive = true;
+  const startTime = Date.now();
+
+  function animateWormhole() {
+    if (!wormholeActive) return;
+    const time = (Date.now() - startTime) / 1000;
+    drawWormholeTunnel(ctx, 256, 240, time, 1);
+    requestAnimationFrame(animateWormhole);
+  }
+  animateWormhole();
+
+  const textEl = document.getElementById('wormhole-text');
+  const lines = [
+    "You were just eating cereal...",
+    "When suddenly a beam of light hit your living room!",
+    "ZZZZAAAAAPPPP!!!",
+    "You've been teleported across 47 dimensions!",
+    "You land on... a stage??"
+  ];
+
+  for (let li = 0; li < lines.length; li++) {
+    textEl.textContent = '';
+    textEl.classList.add('visible');
+    await typeText(textEl, lines[li], 35);
+    if (li === 2) {
+      // ZAAAP! screen shake
+      screenShake();
+      sfxWarp();
+    }
+    await sleep(1000);
+  }
+
+  // Iris close, switch scene, iris open
+  wormholeActive = false;
+  await irisWipe(true, 500);
+  showScene('game-screen');
+  await sleep(100);
+  await irisWipe(false, 500);
+  startGame();
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ===== STAGE SETUP =====
+const stageCanvas = document.getElementById('stage-canvas');
+const stageCtx = stageCanvas ? stageCanvas.getContext('2d') : null;
+
+// Audience aliens (pixel art data)
+const audienceAliens = [];
+for (let i = 0; i < 24; i++) {
+  audienceAliens.push({
+    x: 6 + (i % 12) * 20 + (Math.floor(i / 12) * 10),
+    y: 206 + Math.floor(i / 12) * 16,
+    color: ['#5eff3e','#29adff','#ff6ee6','#ffec27','#ff77a8','#ffa300'][i % 6],
+    bobOffset: Math.random() * Math.PI * 2,
+    bobSpeed: 1.5 + Math.random(),
+  });
+}
+
+let stageAnimActive = false;
+
+function drawStage(time) {
+  if (!stageCtx) return;
+  const ctx = stageCtx;
+  ctx.clearRect(0, 0, 256, 240);
+
+  // Background gradient (deep space purple)
+  const grad = ctx.createLinearGradient(0, 0, 0, 240);
+  grad.addColorStop(0, '#0a0020');
+  grad.addColorStop(0.3, '#1a0040');
+  grad.addColorStop(0.6, '#2d0060');
+  grad.addColorStop(1, '#0a0015');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, 256, 240);
+
+  // Distant stars
+  for (let i = 0; i < 20; i++) {
+    const sx = (i * 37 + 11) % 256;
+    const sy = (i * 23 + 7) % 100;
+    ctx.fillStyle = (Math.sin(time * 2 + i) > 0.3) ? '#fff' : '#555';
+    ctx.fillRect(sx, sy, 1, 1);
+  }
+
+  // Spotlight cones from top
+  ctx.globalAlpha = 0.08;
+  const spotColors = ['#ff004d', '#ffec27', '#5eff3e', '#29adff', '#ff6ee6'];
+  for (let i = 0; i < 5; i++) {
+    const sx = 30 + i * 50;
+    const sway = Math.sin(time * 1.5 + i * 1.2) * 15;
+    ctx.fillStyle = spotColors[i];
+    ctx.beginPath();
+    ctx.moveTo(sx, 0);
+    ctx.lineTo(sx + sway - 30, 200);
+    ctx.lineTo(sx + sway + 30, 200);
+    ctx.closePath();
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // Stage floor
+  ctx.fillStyle = '#1a0033';
+  ctx.fillRect(0, 192, 256, 4);
+  ctx.fillStyle = '#330055';
+  ctx.fillRect(0, 196, 256, 44);
+
+  // Stage floor tiles
+  for (let i = 0; i < 16; i++) {
+    ctx.fillStyle = i % 2 === 0 ? '#2a0045' : '#380060';
+    ctx.fillRect(i * 16, 196, 16, 44);
+  }
+  ctx.fillStyle = '#ffec27';
+  ctx.fillRect(0, 192, 256, 2); // gold trim
+
+  // Stage light fixtures at top
+  for (let i = 0; i < 8; i++) {
+    const lx = 16 + i * 32;
+    const pulse = (Math.sin(time * 4 + i * 0.8) + 1) / 2;
+    ctx.fillStyle = '#333';
+    ctx.fillRect(lx - 3, 0, 6, 4);
+    ctx.fillStyle = spotColors[i % 5];
+    ctx.globalAlpha = 0.4 + pulse * 0.6;
+    ctx.fillRect(lx - 2, 4, 4, 3);
+    ctx.globalAlpha = 1;
+  }
+
+  // Animated audience (pixel blobs)
+  audienceAliens.forEach(a => {
+    const bob = Math.sin(time * a.bobSpeed + a.bobOffset) * 2;
+    const ay = a.y + bob;
+    // Head
+    ctx.fillStyle = a.color;
+    ctx.fillRect(a.x, ay, 6, 5);
+    // Eyes
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(a.x + 1, ay + 1, 1, 1);
+    ctx.fillRect(a.x + 4, ay + 1, 1, 1);
+    // Body
+    ctx.fillStyle = a.color;
+    ctx.globalAlpha = 0.7;
+    ctx.fillRect(a.x - 1, ay + 5, 8, 6);
+    ctx.globalAlpha = 1;
+  });
+
+  // Floating "ZORP TV" logo in corner
+  ctx.fillStyle = '#ffec27';
+  ctx.globalAlpha = 0.4;
+  ctx.font = '6px monospace';
+  ctx.fillText('ZORP TV', 2, 238);
+  ctx.globalAlpha = 1;
+}
+
+function animateStage() {
+  if (!stageAnimActive) return;
+  drawStage(Date.now() / 1000);
+  requestAnimationFrame(animateStage);
+}
+
+// ===== PARTICLE SYSTEM =====
+const particleCanvas = document.getElementById('particle-canvas');
+const particleCtx = particleCanvas ? particleCanvas.getContext('2d') : null;
+let particles = [];
+
+function spawnParticles(x, y, count, colors, speed = 3) {
+  for (let i = 0; i < count; i++) {
+    const angle = (Math.PI * 2 * i) / count + Math.random() * 0.5;
+    const vel = speed * (0.5 + Math.random());
+    particles.push({
+      x, y,
+      vx: Math.cos(angle) * vel,
+      vy: Math.sin(angle) * vel - 1,
+      life: 1,
+      decay: 0.015 + Math.random() * 0.02,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      size: 2 + Math.random() * 3,
+    });
+  }
+}
+
+function updateParticles() {
+  if (!particleCtx) return;
+  particleCtx.clearRect(0, 0, 768, 720);
+  particles = particles.filter(p => p.life > 0);
+  particles.forEach(p => {
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vy += 0.08; // gravity
+    p.life -= p.decay;
+    particleCtx.globalAlpha = p.life;
+    particleCtx.fillStyle = p.color;
+    particleCtx.fillRect(p.x, p.y, p.size, p.size);
+  });
+  particleCtx.globalAlpha = 1;
+  requestAnimationFrame(updateParticles);
+}
+updateParticles();
+
+// Sparkle burst on correct answer
+function correctParticles() {
+  spawnParticles(512, 450, 40, ['#ffec27','#5eff3e','#ff6ee6','#29adff','#fff'], 6);
+}
+
+function buildStage() {
+  stageAnimActive = true;
+  animateStage();
+}
+
+// ===== QUESTIONS =====
+const QUESTIONS = [
+  {
+    q: "Human greeting ritual: What is a 'handshake'?",
+    a: ["Two humans linking tentacles","A seizure of the upper limb","Checking each other for weapons","A mating display involving palms"],
+    reactions: [
+      "LINKING TENTACLES?! How intimate! On my planet that means you're MARRIED now!",
+      "A SEIZURE?! And you do this ON PURPOSE?! Humans are braver than I thought!",
+      "WEAPONS CHECK!! I knew humans were paranoid! Very wise, very wise...",
+      "A MATING DISPLAY?! So THAT'S why my Earth ambassador kept shaking hands with everyone! SECURITY!!"
+    ],
+    reaction: "Fascinating!! On my planet we greet by spitting acid. Much more efficient!"
+  },
+  {
+    q: "Why do humans stare at small glowing rectangles for 8 hours daily?",
+    a: ["Recharging their life force","Worshipping their silicon overlords","They forgot how to look up","The rectangles contain tiny prisoners they must watch"],
+    reactions: [
+      "RECHARGING!! So humans ARE partially electronic! My thesis was RIGHT!",
+      "SILICON OVERLORDS! I must warn the Galactic Council about Earth's REAL rulers!",
+      "They FORGOT?! How do you forget an ENTIRE DIRECTION?! Earth schooling must be terrible!",
+      "TINY PRISONERS!! That's horrifying! ...Can I see them? For research purposes."
+    ],
+    reaction: "I KNEW IT! The rectangles are in charge!! I must warn the Galactic Council!"
+  },
+  {
+    q: "What is the human food known as 'pizza'?",
+    a: ["A circular debt arrangement","Flattened wheat with old milk on top","A peace treaty you eat","An edible flying saucer prototype"],
+    reactions: [
+      "A DEBT CIRCLE?! So your economy runs on cheese and bread?! ...Actually that explains a LOT.",
+      "OLD MILK ON WHEAT?! When you describe it like that, I'm HORRIFIED. But also hungry??",
+      "AN EDIBLE PEACE TREATY!! No wonder wars start when someone takes the last slice!",
+      "EDIBLE SAUCERS!! You EAT your spacecraft prototypes?! No wonder you haven't left your solar system!"
+    ],
+    reaction: "You EAT your flying saucers?! No wonder you haven't achieved light speed!"
+  },
+  {
+    q: "Why do humans voluntarily enter a 'gym'?",
+    a: ["Punishment for eating too much pizza","To practice lifting things and putting them down","A cult that worships mirrors","They enjoy suffering in spandex"],
+    reactions: [
+      "So the pizza creates GUILT and the gym absolves it?! It's a RELIGION! The Church of Cardio!",
+      "LIFTING AND PUTTING DOWN!! You could at least MOVE the things somewhere useful! Build a HOUSE!",
+      "A MIRROR CULT!! That explains why they keep looking at themselves! The ritual makes sense now!",
+      "SUFFERING IN SPANDEX!! On my planet that's a war crime! You do this VOLUNTARILY?!"
+    ],
+    reaction: "LIFTING THINGS AND PUTTING THEM BACK?! Your species is magnificently pointless!"
+  },
+  {
+    q: "What is a 'cat' and why does it control the household?",
+    a: ["A tiny furry dictator","Earth's true dominant species","A loaf of bread that judges you","A government surveillance device that purrs"],
+    reactions: [
+      "A FURRY DICTATOR!! I've met a few of those at Galactic Summits. They're the WORST at diplomacy!",
+      "THE DOMINANT SPECIES!! I've been negotiating with the WRONG CREATURES this entire time!!",
+      "JUDGMENTAL BREAD!! Earth food has OPINIONS?! Does the pizza judge you too?!",
+      "A PURRING SPY DEVICE!! Your governments are cleverer than we thought! We must sweep for cats IMMEDIATELY!"
+    ],
+    reaction: "So cats ARE the real leaders! I should have been negotiating with THEM this whole time!"
+  },
+  {
+    q: "Explain the human ritual known as 'Monday'.",
+    a: ["A weekly punishment from the sun god","The day humans collectively pretend to work","When Earth's rotation feels 47% slower","A shared hallucination of misery"],
+    reactions: [
+      "A SUN GOD PUNISHMENT!! Which sun god?! We have 14 in our system and NONE of them are this cruel!",
+      "PRETENDING TO WORK?! So Mondays are performance art?! Humans are more creative than I realized!",
+      "47% SLOWER?! That's a PHYSICS VIOLATION! I'm reporting Earth to the Dimension Standards Board!",
+      "A SHARED HALLUCINATION!! Impressive! On my planet it takes DRUGS to do that! You do it for FREE!"
+    ],
+    reaction: "On my planet EVERY day is Monday. That explains why we conquered 12 galaxies out of sheer rage!"
+  },
+  {
+    q: "What happens during a human 'traffic jam'?",
+    a: ["Thousands sit in metal boxes screaming","A failed attempt at group meditation","Humans practice patience (badly)","Cars form a hive mind that decides to stop"],
+    reactions: [
+      "SCREAMING IN BOXES!! On my planet we call that 'prison'! You do it DAILY?! FOR FREE?!",
+      "FAILED MEDITATION!! So close to enlightenment yet SO FAR! The honking must break concentration!",
+      "PATIENCE PRACTICE!! With a 97% failure rate, I'd say your species needs MORE practice!",
+      "A CAR HIVE MIND!! The vehicles are SENTIENT?! First the rectangles, now the CARS?! Who actually runs Earth?!"
+    ],
+    reaction: "YOU JUST SIT THERE?! Why not activate your car's warp drive?! Oh... oh no. You DON'T HAVE THOSE?!"
+  },
+  {
+    q: "Why do humans expel air from their nose holes when amused?",
+    a: ["Laughter is a factory reset","Their humor gland overflows","It prevents their head from exploding","Nobody knows. Not even humans."],
+    reactions: [
+      "A FACTORY RESET!! So comedians are basically IT support for humans?! Reboot via joke!",
+      "THE HUMOR GLAND!! Where is it located?! I've been dissecting-- I mean STUDYING humans for YEARS!",
+      "EXPLOSION PREVENTION!! I've been dangerously close to laughing lately! *holds head nervously*",
+      "EVEN HUMANS DON'T KNOW?! A whole species doing something and NOBODY knows why?! INCREDIBLE!"
+    ],
+    reaction: "HEAD EXPLOSION PREVENTION!! I have been dangerously close! *nervous alien laughter*"
+  },
+  {
+    q: "What is 'sleeping' and why do humans do it EVERY SINGLE DAY?",
+    a: ["A nightly death rehearsal","Humans are solar powered with bad batteries","Their brains need to defragment","Practicing being furniture"],
+    reactions: [
+      "DEATH REHEARSAL!! You practice DYING every night?! That's the most metal thing I've ever heard!",
+      "BAD BATTERIES!! Have you tried plugging in?! Oh wait... you don't have charging ports. Tragic.",
+      "BRAIN DEFRAG!! So without sleep you get... corrupted humans?! That explains your politicians!",
+      "PRACTICING BEING FURNITURE!! So when humans say they're 'dead tired' they become a COUCH?! Amazing!"
+    ],
+    reaction: "YOU SHUT DOWN FOR 8 HOURS?! You're basically OFF for a third of your life!! MY SPECIES WILL NOTE THIS VULNERABILITY... I mean... how cute!"
+  },
+  {
+    q: "FINAL QUESTION: What is the meaning of human existence?",
+    a: ["42","To make memes and eat snacks","Nobody knows but they're very loud about it","To boldly argue about pineapple on pizza"],
+    reactions: [
+      "42!! That's the EXACT number of times I've asked this question and gotten a DIFFERENT answer!",
+      "MEMES AND SNACKS!! Honestly? That might be the most honest answer in the HISTORY of this show!",
+      "LOUD AND CLUELESS!! That's basically the human motto! I'm putting that on Earth's Galactic Profile!",
+      "THE PINEAPPLE WARS!! I've read about this in our intelligence reports! It almost destroyed a continent!"
+    ],
+    reaction: "ALL ANSWERS ARE CORRECT!! Honestly I wrote these questions 10 minutes ago in the space-bathroom. I have NO idea what I'm doing! CONGRATULATIONS!!!"
+  }
+];
+
+// Varied thinking lines (Zorgblax "processing" the answer)
+const THINKING_LINES = [
+  "Hmmmm... processing through my VERY ADVANCED brain...",
+  "Let me consult my Earth Manual... *reads book upside down*",
+  "My 13 brains are computing... carry the one...",
+  "INTERESTING. Running answer through the Zorputer 3000...",
+  "Checking my notes... *shuffles papers that are clearly blank*",
+  "One moment... *pretends to call someone on space phone* ...yes? ...uh huh... thank you.",
+  "Analyzing... I am DEFINITELY not just guessing...",
+  "Cross-referencing with the Galactic Encyclopedia of Earth Nonsense...",
+  "Hold on, my answer tentacle is tingling... that's either good or I'm having a stroke...",
+  "Let me ask the audience-- NO WAIT, they don't know either. Nobody knows. I'm winging it."
+];
+
+// Audience heckles between questions
+const AUDIENCE_HECKLES = [
+  "I BET 3 GLORBONS ON THE HUMAN!",
+  "THAT'S NOT EVEN A REAL WORD!",
+  "MY SPAWN-LARVAE COULD ANSWER THAT!",
+  "ZORGBLAX DOESN'T KNOW ANYTHING!",
+  "IS EARTH EVEN A REAL PLANET?!",
+  "I CAME HERE FOR THE FREE SNACKS!",
+  "THE HUMAN SMELLS LIKE CALCIUM!",
+  "BRING BACK THE BLOB FROM LAST WEEK!",
+  "BOOOOOO! ...wait, which one am I booing?",
+  "I LEFT MY HOME NEBULA FOR THIS?!",
+  "DOES THE HUMAN DO TRICKS?!",
+  "THIS IS RIGGED! ...right? IS IT?!"
+];
+
+// Zorgblax's suspicion lines (escalating through the game)
+const SUSPICION_LINES = [
+  null, // Q1: no suspicion yet
+  null, // Q2: still chill
+  "Wait... you seem to know a LOT about your own planet. Suspicious...",
+  null, // Q4: lets it go
+  "Hmm... you're getting these awfully fast. Are you ACTUALLY from Earth?!",
+  null, // Q6
+  "HOLD ON. Are you cheating?! *checks under your chair* ...I don't know what I expected to find.",
+  null, // Q8
+  "I've got my EYE STALKS on you, human. SEVEN of them. You can't fool ALL seven.",
+  null  // Q10: too excited about the finale
+];
+
+const PRIZES = [
+  "100 Zorpbucks",
+  "500 Zorpbucks + a USED SOCK",
+  "1,000 Zorpbucks",
+  "5,000 Zorpbucks + a SLIGHTLY HAUNTED MOON",
+  "10,000 Zorpbucks",
+  "50,000 Zorpbucks + NAMING RIGHTS TO A COMET",
+  "100,000 Zorpbucks",
+  "500,000 Zorpbucks + a CERTIFICATE SAYING YOU'RE OKAY",
+  "1 MILLION Zorpbucks + EARTH'S PARKING SPOT IN THE GALAXY",
+  "1 BLORGINAIRE (a number so big we had to invent it)"
+];
+
+// ===== GAME STATE =====
+let currentQuestion = 0;
+
+// Show audience bubble briefly
+function showAudienceBubble(text) {
+  const bubble = document.getElementById('audience-bubble');
+  bubble.textContent = text;
+  bubble.style.left = (100 + Math.random() * 600) + 'px';
+  bubble.classList.add('visible');
+  setTimeout(() => bubble.classList.remove('visible'), 2500);
+}
+
+async function startGame() {
+  showScene('game-screen');
+  buildStage();
+  currentQuestion = 0;
+  updateHUD();
+  setAlienExpression('neutral');
+
+  // Intro dialog
+  await showDialog("ZORGBLAX", "WELCOME, DISGUSTING LITTLE EARTH CREATURE!");
+  await waitForAdvance();
+  await showDialog("ZORGBLAX", "You have been chosen to compete on the galaxy's #1 game show!");
+  await waitForAdvance();
+  showAudienceBubble("WOOOOO! FRESH MEAT!");
+  await showDialog("ZORGBLAX", "Answer my BRILLIANT questions about your dumb planet and win ZORPBUCKS!");
+  await waitForAdvance();
+  await showDialog("ZORGBLAX", "Don't worry... I DEFINITELY know all the right answers.");
+  await waitForAdvance();
+  await showDialog("ZORGBLAX", "I studied your planet for ALMOST fifteen minutes. Let's GO!");
+  await waitForAdvance();
+
+  askQuestion();
+}
+
+function updateHUD() {
+  document.getElementById('hud-left').innerHTML =
+    currentQuestion > 0 ? `WON: ${PRIZES[currentQuestion - 1]}` : 'WON: Nothing yet!';
+  // Update prize ladder
+  const ladder = document.getElementById('prize-ladder');
+  ladder.innerHTML = '';
+  PRIZES.forEach((p, i) => {
+    const step = document.createElement('div');
+    step.className = 'prize-step';
+    step.textContent = (i + 1) + '. ' + p;
+    if (i < currentQuestion) step.classList.add('won');
+    if (i === currentQuestion) step.classList.add('active');
+    ladder.appendChild(step);
+  });
+}
+
+function showDialog(speaker, text) {
+  const box = document.getElementById('dialog-box');
+  const speakerEl = document.getElementById('dialog-speaker');
+  const textEl = document.getElementById('dialog-text');
+  const choices = document.getElementById('choices');
+  const prompt = document.querySelector('.continue-prompt');
+  choices.style.display = 'none';
+  box.style.display = 'block';
+  if (prompt) prompt.style.display = 'none';
+  speakerEl.textContent = speaker + ':';
+  return typeText(textEl, text);
+}
+
+async function askQuestion() {
+  updateHUD();
+  const q = QUESTIONS[currentQuestion];
+
+  // Occasional audience heckle before question
+  if (currentQuestion > 0 && Math.random() > 0.4) {
+    const heckle = AUDIENCE_HECKLES[Math.floor(Math.random() * AUDIENCE_HECKLES.length)];
+    showAudienceBubble(heckle);
+  }
+
+  // Suspicion line (running gag)
+  const suspicion = SUSPICION_LINES[currentQuestion];
+  if (suspicion) {
+    setAlienExpression('suspicious');
+    await showDialog("ZORGBLAX", suspicion);
+    await waitForAdvance();
+    setAlienExpression('neutral');
+  }
+
+  // Ask the question
+  sfxQuestionReveal();
+  await showDialog("ZORGBLAX", "For " + PRIZES[currentQuestion] + "...");
+  await waitForAdvance();
+  await showDialog("ZORGBLAX", q.q);
+  await waitForAdvance();
+
+  // Show choices
+  const box = document.getElementById('dialog-box');
+  box.style.display = 'none';
+  const choicesEl = document.getElementById('choices');
+  choicesEl.style.display = 'grid';
+  choicesEl.innerHTML = '';
+  selectedChoice = 0;
+  choicesActive = true;
+
+  const labels = ['A', 'B', 'C', 'D'];
+  q.a.forEach((answer, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'choice-btn';
+    if (i === 0) btn.classList.add('kb-selected');
+    btn.innerHTML = `<span class="choice-label">${labels[i]}:</span> ${answer}`;
+    btn.onclick = () => { if (choicesActive) confirmAnswer(i); };
+    btn.onmouseenter = () => { if (choicesActive) highlightChoice(i); };
+    choicesEl.appendChild(btn);
+  });
+}
+
+// Keyboard navigation state
+let selectedChoice = 0;
+let choicesActive = false;
+
+function highlightChoice(index) {
+  selectedChoice = index;
+  const btns = document.querySelectorAll('.choice-btn');
+  btns.forEach((b, i) => b.classList.toggle('kb-selected', i === index));
+}
+
+// "Final answer" confirmation
+async function confirmAnswer(index) {
+  choicesActive = false;
+  highlightChoice(index);
+  sfxSelect();
+
+  const btns = document.querySelectorAll('.choice-btn');
+  btns[index].classList.add('locked');
+
+  // Show confirmation dialog over the choices
+  const box = document.getElementById('dialog-box');
+  box.style.display = 'block';
+  box.style.zIndex = '15';
+  await typeText(document.getElementById('dialog-text'), "Is that your FINAL ANSWER, Earth creature?!");
+  document.getElementById('dialog-speaker').textContent = 'ZORGBLAX:';
+  await waitForAdvance();
+  box.style.display = 'none';
+  box.style.zIndex = '10';
+
+  selectAnswer(index);
+}
+
+async function selectAnswer(index) {
+  const choicesEl = document.getElementById('choices');
+  const dimOverlay = document.getElementById('dim-overlay');
+
+  // Flash the selected answer
+  const btns = choicesEl.querySelectorAll('.choice-btn');
+  btns.forEach((b, i) => {
+    if (i === index) {
+      b.style.background = '#ffec27';
+      b.style.color = '#000';
+      b.style.borderColor = '#fff';
+      b.style.zIndex = '20';
+      b.style.position = 'relative';
+    } else {
+      b.style.opacity = '0.2';
+    }
+    b.onclick = null;
+  });
+
+  // Dramatic dim
+  dimOverlay.classList.add('active');
+  await sleep(600);
+
+  // Varied thinking line
+  choicesEl.style.display = 'none';
+  dimOverlay.classList.remove('active');
+  const q = QUESTIONS[currentQuestion];
+  const thinkLine = THINKING_LINES[currentQuestion % THINKING_LINES.length];
+  setAlienExpression('thinking');
+  await showDialog("ZORGBLAX", thinkLine);
+  await sleep(2000);
+
+  // Drumroll tension
+  sfxDrumroll();
+  await sleep(900);
+
+  // Always "correct"
+  sfxCorrect();
+  correctParticles();
+  setAlienExpression('celebrating');
+
+  const correctLines = [
+    "CORRECT!!! (I think?!)",
+    "YES!! That's what I had written down! *hides blank card*",
+    "ABSOLUTELY RIGHT!! ...probably! Who's keeping track?!",
+    "NAILED IT!! My answer tentacle confirms it!",
+    "CORRECT!! The Zorputer 3000 agrees! (it's just a box with a face drawn on it)"
+  ];
+  const correctLine = correctLines[Math.floor(Math.random() * correctLines.length)];
+  await showDialog("ZORGBLAX", correctLine + " You win " + PRIZES[currentQuestion] + "!");
+  showAudienceBubble(Math.random() > 0.5 ? "WOOOOOOO!!" : "HOW?! IMPOSSIBLE!");
+  await waitForAdvance();
+
+  // Answer-specific reaction
+  sfxAudienceGasp();
+  setAlienExpression('shocked');
+  const reaction = q.reactions[index];
+  await showDialog("ZORGBLAX", reaction);
+  await waitForAdvance();
+
+  setAlienExpression('neutral');
+  currentQuestion++;
+  if (currentQuestion >= QUESTIONS.length) {
+    await startDanceParty();
+  } else {
+    askQuestion();
+  }
+}
+
+// ===== DANCE PARTY =====
+// ===== DANCE PARTY CANVAS =====
+let danceActive = false;
+let discoBallY = -30;
+let discoBallTargetY = 40;
+let discoBallDropping = false;
+const danceColors = ['#ff004d','#ffec27','#5eff3e','#29adff','#ff6ee6','#ff77a8','#ffa300','#7e2553'];
+
+// Pixel art dancer sprites (simple 2-frame animation)
+// Zorgblax is the big center dancer!
+const dancerSprites = [];
+// Regular dancers around the edges
+for (let i = 0; i < 10; i++) {
+  dancerSprites.push({
+    x: 15 + (i % 5) * 48,
+    y: 150 + Math.floor(i / 5) * 50,
+    color: danceColors[i % danceColors.length],
+    frame: 0,
+    isZorgblax: false,
+  });
+}
+// Zorgblax center stage!
+dancerSprites.push({
+  x: 112,
+  y: 120,
+  color: '#5eff3e',
+  frame: 0,
+  isZorgblax: true,
+});
+
+function drawDanceParty(ctx, time) {
+  ctx.clearRect(0, 0, 256, 240);
+
+  // Flashing dance floor tiles
+  const tileSize = 16;
+  for (let y = 0; y < 15; y++) {
+    for (let x = 0; x < 16; x++) {
+      const colorIdx = (x + y + Math.floor(time * 4)) % danceColors.length;
+      ctx.fillStyle = danceColors[colorIdx];
+      ctx.globalAlpha = 0.4 + Math.sin(time * 6 + x + y) * 0.3;
+      ctx.fillRect(x * tileSize, y * tileSize, tileSize, tileSize);
+    }
+  }
+  ctx.globalAlpha = 1;
+
+  // Animate disco ball drop
+  if (discoBallDropping) {
+    discoBallY += (discoBallTargetY - discoBallY) * 0.04;
+    if (Math.abs(discoBallY - discoBallTargetY) < 0.5) {
+      discoBallY = discoBallTargetY;
+      discoBallDropping = false;
+    }
+  }
+
+  // Disco ball
+  const ballX = 128, ballY = discoBallY, ballR = 14;
+  // String
+  ctx.strokeStyle = '#888';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(ballX, 0);
+  ctx.lineTo(ballX, ballY - ballR);
+  ctx.stroke();
+  // Ball body
+  ctx.fillStyle = '#ccc';
+  ctx.beginPath();
+  ctx.arc(ballX, ballY, ballR, 0, Math.PI * 2);
+  ctx.fill();
+  // Facets
+  for (let i = 0; i < 12; i++) {
+    const angle = (i / 12) * Math.PI * 2 + time * 2;
+    const fx = ballX + Math.cos(angle) * (ballR - 3);
+    const fy = ballY + Math.sin(angle) * (ballR - 3);
+    ctx.fillStyle = Math.sin(time * 8 + i) > 0 ? '#fff' : '#aaa';
+    ctx.fillRect(fx - 1, fy - 1, 3, 3);
+  }
+  // Light rays from disco ball
+  ctx.globalAlpha = 0.15;
+  for (let i = 0; i < 8; i++) {
+    const angle = (i / 8) * Math.PI * 2 + time * 1.5;
+    const rayLen = 100 + Math.sin(time * 3 + i) * 30;
+    ctx.strokeStyle = danceColors[i % danceColors.length];
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(ballX, ballY);
+    ctx.lineTo(ballX + Math.cos(angle) * rayLen, ballY + Math.sin(angle) * rayLen);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+  ctx.lineWidth = 1;
+
+  // Pixel dancers (2-frame animation)
+  const frame = Math.floor(time * 4) % 2;
+  dancerSprites.forEach((d, i) => {
+    const bob = Math.sin(time * 6 + i) * 3;
+    const dx = d.x;
+    const dy = d.y + bob;
+
+    if (d.isZorgblax) {
+      // ZORGBLAX - big center dancer!
+      const s = 2; // scale multiplier
+      // Antenna
+      ctx.fillStyle = '#29adff';
+      ctx.fillRect(dx + 2*s, dy - 4*s, s, 3*s);
+      ctx.fillRect(dx + 7*s, dy - 4*s, s, 3*s);
+      const glowFrame = Math.floor(time * 6) % 2;
+      ctx.fillStyle = glowFrame ? '#fff' : '#29adff';
+      ctx.fillRect(dx + 1*s, dy - 5*s, s, s);
+      ctx.fillRect(dx + 8*s, dy - 5*s, s, s);
+      // Head
+      ctx.fillStyle = '#5eff3e';
+      ctx.fillRect(dx, dy - 1*s, 10*s, 7*s);
+      // Eyes (big, excited)
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(dx + 2*s, dy, 2*s, 2*s);
+      ctx.fillRect(dx + 6*s, dy, 2*s, 2*s);
+      ctx.fillStyle = '#ff004d';
+      ctx.fillRect(dx + 2*s, dy, s, s);
+      ctx.fillRect(dx + 7*s, dy, s, s);
+      // Big grin
+      ctx.fillStyle = '#1a0033';
+      ctx.fillRect(dx + 1*s, dy + 4*s, 8*s, 2*s);
+      ctx.fillStyle = '#ffec27';
+      ctx.fillRect(dx + 2*s, dy + 4*s, 6*s, s);
+      // Body / suit
+      ctx.fillStyle = '#7e2553';
+      ctx.fillRect(dx + s, dy + 6*s, 8*s, 6*s);
+      ctx.fillStyle = '#a8437a';
+      ctx.fillRect(dx + 3*s, dy + 6*s, 4*s, s);
+      // Arms (dancing!)
+      ctx.fillStyle = '#5eff3e';
+      if (frame === 0) {
+        ctx.fillRect(dx - 2*s, dy + 3*s, 2*s, 4*s);  // left up
+        ctx.fillRect(dx + 10*s, dy + 6*s, 2*s, 4*s);  // right down
+      } else {
+        ctx.fillRect(dx - 2*s, dy + 6*s, 2*s, 4*s);  // left down
+        ctx.fillRect(dx + 10*s, dy + 3*s, 2*s, 4*s);  // right up
+      }
+      // Legs
+      ctx.fillStyle = '#1a0033';
+      ctx.fillRect(dx + 2*s, dy + 12*s, 2*s, 3*s);
+      ctx.fillRect(dx + 6*s, dy + 12*s, 2*s, 3*s);
+    } else {
+      // Regular dancer
+      // Head
+      ctx.fillStyle = d.color;
+      ctx.fillRect(dx, dy, 6, 5);
+      // Eyes
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(dx + 1, dy + 1, 1, 1);
+      ctx.fillRect(dx + 4, dy + 1, 1, 1);
+      // Body
+      ctx.fillStyle = d.color;
+      ctx.fillRect(dx - 1, dy + 5, 8, 8);
+
+      // Arms (alternating frames)
+      if (frame === 0) {
+        ctx.fillRect(dx - 3, dy + 4, 2, 5);  // left arm down
+        ctx.fillRect(dx + 7, dy + 2, 2, 5);  // right arm up-ish
+      } else {
+        ctx.fillRect(dx - 3, dy + 2, 2, 5);  // left arm up-ish
+        ctx.fillRect(dx + 7, dy + 4, 2, 5);  // right arm down
+      }
+      // Legs
+      ctx.fillStyle = '#1a0033';
+      ctx.fillRect(dx, dy + 13, 2, 4);
+      ctx.fillRect(dx + 4, dy + 13, 2, 4);
+    }
+  });
+
+  // Fireworks (periodic bursts)
+  const fwPhase = Math.floor(time * 2) % 3;
+  const fwX = [64, 192, 128][fwPhase];
+  const fwY = [50, 60, 80][fwPhase];
+  const fwAge = (time * 2) % 1;
+  if (fwAge < 0.7) {
+    const numSparks = 12;
+    for (let i = 0; i < numSparks; i++) {
+      const angle = (i / numSparks) * Math.PI * 2;
+      const dist = fwAge * 40;
+      ctx.fillStyle = danceColors[(i + fwPhase) % danceColors.length];
+      ctx.globalAlpha = 1 - fwAge;
+      ctx.fillRect(fwX + Math.cos(angle) * dist, fwY + Math.sin(angle) * dist, 2, 2);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  // Confetti rain
+  for (let i = 0; i < 30; i++) {
+    const cx = (i * 47 + time * 40) % 256;
+    const cy = (i * 31 + time * (50 + i * 2)) % 240;
+    const wobble = Math.sin(time * 5 + i) * 2;
+    ctx.fillStyle = danceColors[i % danceColors.length];
+    ctx.fillRect(cx + wobble, cy, 2, 3);
+  }
+}
+
+function animateDance() {
+  if (!danceActive) return;
+  const canvas = document.getElementById('dance-canvas');
+  const ctx = canvas.getContext('2d');
+  drawDanceParty(ctx, Date.now() / 1000);
+  requestAnimationFrame(animateDance);
+}
+
+async function startDanceParty() {
+  // Zorgblax announces the dance party BEFORE transitioning
+  setAlienExpression('celebrating');
+  await showDialog("ZORGBLAX", "YOU DID IT!! YOU ARE A CERTIFIED BLORGINAIRE!!");
+  await waitForAdvance();
+  await showDialog("ZORGBLAX", "And you know what THAT means...");
+  await waitForAdvance();
+  await showDialog("ZORGBLAX", "EVERYBODY DANCE!! EVEN ME!! ESPECIALLY ME!!!");
+  await waitForAdvance();
+
+  stageAnimActive = false;
+  await irisWipe(true, 400);
+  showScene('dance-screen');
+  sfxDance();
+  danceActive = true;
+  discoBallY = -30; // start off screen
+  discoBallTargetY = 40;
+  discoBallDropping = true;
+  animateDance();
+  await irisWipe(false, 400);
+
+  // Rainbow cycling text
+  const textEl = document.getElementById('dance-text');
+  let hue = 0;
+  setInterval(() => {
+    hue = (hue + 5) % 360;
+    textEl.style.color = `hsl(${hue}, 100%, 60%)`;
+  }, 50);
+  textEl.innerHTML = "YOU ARE A BLORGINAIRE!<br>DANCE PARTY!!";
+
+  // Zorpbuck counter (rapidly counting up)
+  const counterEl = document.getElementById('zorpbuck-counter');
+  let count = 0;
+  const targetCount = 9999999;
+  const countInterval = setInterval(() => {
+    count += Math.floor(Math.random() * 500000) + 100000;
+    if (count >= targetCount) {
+      count = targetCount;
+      counterEl.innerHTML = count.toLocaleString() + " ZORPBUCKS<br>(worth exactly nothing)";
+      clearInterval(countInterval);
+    } else {
+      counterEl.textContent = count.toLocaleString() + " ZORPBUCKS";
+    }
+  }, 100);
+
+  // Credits
+  document.getElementById('credits').innerHTML =
+    "CREATED BY ZORGBLAX PRODUCTIONS<br><br>" +
+    "HOST: ZORGBLAX THE MAGNIFICENT<br>" +
+    "(winner of 0 awards)<br><br>" +
+    "CONTESTANT: YOU<br>" +
+    "(Earth Creature #7,832,491,002)<br><br>" +
+    "CATERING: BLORP'S SPACE DINER<br>" +
+    "(3 stars out of 47)<br><br>" +
+    "AUDIENCE WRANGLER: GREG<br>" +
+    "(Greg is a sentient mop)<br><br>" +
+    "LEGAL: Zorpbucks have no value in any<br>" +
+    "known or unknown dimension. Side effects<br>" +
+    "may include tentacle growth, time loops,<br>" +
+    "and an unshakeable feeling of cosmic<br>" +
+    "insignificance. By playing you agree to<br>" +
+    "surrender your planet. (just kidding)<br>" +
+    "(or are we?)<br><br>" +
+    "THANKS FOR PLAYING!";
+
+  // Play again button
+  setTimeout(() => {
+    document.getElementById('play-again-btn').style.display = 'block';
+  }, 4000);
+}
+
+// ===== RESPONSIVE SCALING =====
+function scaleScreen() {
+  const screen = document.getElementById('screen');
+  const sw = 1024, sh = 960;
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const scale = Math.min(vw / sw, vh / sh);
+  screen.style.transform = `scale(${scale})`;
+  // Center the scaled screen manually since transform doesn't affect layout
+  const scaledW = sw * scale;
+  const scaledH = sh * scale;
+  screen.style.marginLeft = Math.max(0, (vw - scaledW) / 2) + 'px';
+  screen.style.marginTop = Math.max(0, (vh - scaledH) / 2) + 'px';
+}
+window.addEventListener('resize', scaleScreen);
+scaleScreen();
+
+// ===== INIT =====
+initStars();
+
+// Autoplay title music immediately
+ensureAudio();
+sfxTitleMusic();
+
+document.getElementById('title-screen').addEventListener('click', () => {
+  ensureAudio();
+  sfxSelect();
+  stopTitleMusic();
+  playWormhole();
+});
+
+// Title screen keyboard handler is merged into the main keydown listener above
+
+document.getElementById('play-again-btn').addEventListener('click', () => {
+  location.reload();
+});
+</script>
+</body>
+</html>
