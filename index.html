@@ -11,10 +11,7 @@
 
   body {
     background: #000;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh;
+    margin: 0;
     overflow: hidden;
     font-family: 'Press Start 2P', monospace;
     image-rendering: pixelated;
@@ -28,7 +25,7 @@
     overflow: hidden;
     border: 4px solid #444;
     box-shadow: 0 0 40px rgba(0,255,100,0.15);
-    transform-origin: center center;
+    transform-origin: top left;
   }
 
   /* Scanline overlay */
@@ -2002,8 +1999,13 @@ function scaleScreen() {
   const sw = 1024, sh = 960;
   const vw = window.innerWidth;
   const vh = window.innerHeight;
-  const scale = Math.min(vw / sw, vh / sh, 1);
+  const scale = Math.min(vw / sw, vh / sh);
   screen.style.transform = `scale(${scale})`;
+  // Center the scaled screen manually since transform doesn't affect layout
+  const scaledW = sw * scale;
+  const scaledH = sh * scale;
+  screen.style.marginLeft = Math.max(0, (vw - scaledW) / 2) + 'px';
+  screen.style.marginTop = Math.max(0, (vh - scaledH) / 2) + 'px';
 }
 window.addEventListener('resize', scaleScreen);
 scaleScreen();
