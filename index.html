@@ -28,6 +28,7 @@
     overflow: hidden;
     border: 4px solid #444;
     box-shadow: 0 0 40px rgba(0,255,100,0.15);
+    transform-origin: center center;
   }
 
   /* Scanline overlay */
@@ -1995,21 +1996,24 @@ async function startDanceParty() {
   }, 4000);
 }
 
+// ===== RESPONSIVE SCALING =====
+function scaleScreen() {
+  const screen = document.getElementById('screen');
+  const sw = 1024, sh = 960;
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const scale = Math.min(vw / sw, vh / sh, 1);
+  screen.style.transform = `scale(${scale})`;
+}
+window.addEventListener('resize', scaleScreen);
+scaleScreen();
+
 // ===== INIT =====
 initStars();
 
-// Start title music on first user interaction (audio context requires gesture)
-let titleMusicStarted = false;
-function startTitleMusicOnce() {
-  if (titleMusicStarted) return;
-  titleMusicStarted = true;
-  ensureAudio();
-  sfxTitleMusic();
-}
-document.addEventListener('click', startTitleMusicOnce, { once: false });
-document.addEventListener('keydown', startTitleMusicOnce, { once: false });
-// Also listen for mousemove as a fallback to get music going
-document.addEventListener('mousemove', startTitleMusicOnce, { once: true });
+// Autoplay title music immediately
+ensureAudio();
+sfxTitleMusic();
 
 document.getElementById('title-screen').addEventListener('click', () => {
   ensureAudio();
