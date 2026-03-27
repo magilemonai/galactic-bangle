@@ -288,6 +288,61 @@
     line-height: 2;
   }
 
+  /* Prize ladder */
+  .prize-ladder {
+    position: absolute;
+    top: 20px;
+    right: 4px;
+    z-index: 10;
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 1px;
+  }
+  .prize-step {
+    font-size: 5px;
+    color: #555;
+    padding: 2px 4px;
+    text-align: right;
+    transition: all 0.3s;
+    white-space: nowrap;
+  }
+  .prize-step.active {
+    color: #ffec27;
+    text-shadow: 0 0 6px #ffec27;
+  }
+  .prize-step.won {
+    color: #5eff3e;
+  }
+
+  /* Keyboard selected choice */
+  .choice-btn.kb-selected {
+    background: #330066;
+    border-color: #ffec27;
+    color: #ffec27;
+    box-shadow: 0 0 8px rgba(255, 236, 39, 0.4);
+  }
+  .choice-btn.locked {
+    background: #ffec27;
+    color: #000;
+    border-color: #fff;
+    animation: lock-flash 0.15s infinite alternate;
+  }
+  @keyframes lock-flash {
+    0% { opacity: 0.7; } 100% { opacity: 1; }
+  }
+
+  /* Dramatic dim overlay */
+  .dim-overlay {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.6);
+    z-index: 9;
+    opacity: 0;
+    transition: opacity 0.5s;
+    pointer-events: none;
+  }
+  .dim-overlay.active { opacity: 1; }
+
   /* ===== DANCE PARTY ===== */
   #dance-screen {
     text-align: center;
@@ -394,8 +449,9 @@
   <!-- GAME SCREEN -->
   <div id="game-screen" class="scene">
     <div class="stage-lights" id="stage-lights"></div>
+    <div class="dim-overlay" id="dim-overlay"></div>
     <div class="hud-left" id="hud-left"></div>
-    <div class="hud" id="hud"></div>
+    <div class="prize-ladder" id="prize-ladder"></div>
     <div class="alien-host">
       <div class="alien-sprite" id="alien-sprite">&#x1F47E;</div>
       <div class="alien-name">ZORGBLAX THE MAGNIFICENT</div>
@@ -540,6 +596,30 @@ document.addEventListener('click', (e) => {
 });
 
 document.addEventListener('keydown', (e) => {
+  // Arrow keys for choice navigation
+  if (choicesActive) {
+    const btns = document.querySelectorAll('.choice-btn');
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+      e.preventDefault();
+      playTone(300, 0.03, 'square', 0.04);
+      highlightChoice((selectedChoice + 1) % 4);
+    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      playTone(300, 0.03, 'square', 0.04);
+      highlightChoice((selectedChoice + 3) % 4);
+    } else if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      confirmAnswer(selectedChoice);
+    }
+    // A/B/C/D direct select
+    const letterMap = { 'a': 0, 'b': 1, 'c': 2, 'd': 3, '1': 0, '2': 1, '3': 2, '4': 3 };
+    if (letterMap[e.key.toLowerCase()] !== undefined) {
+      e.preventDefault();
+      confirmAnswer(letterMap[e.key.toLowerCase()]);
+    }
+    return;
+  }
+
   if (e.key === 'Enter' || e.key === ' ') {
     // Title screen start
     const title = document.getElementById('title-screen');
@@ -839,10 +919,20 @@ async function startGame() {
 }
 
 function updateHUD() {
-  document.getElementById('hud').innerHTML =
-    `Q: ${currentQuestion + 1}/10<br><span class="prize">&#x1F4B0; ${PRIZES[currentQuestion]}</span>`;
   document.getElementById('hud-left').innerHTML =
     currentQuestion > 0 ? `WON: ${PRIZES[currentQuestion - 1]}` : 'WON: Nothing yet!';
+  // Update prize ladder
+  const ladder = document.getElementById('prize-ladder');
+  ladder.innerHTML = '';
+  PRIZES.forEach((p, i) => {
+    const step = document.createElement('div');
+    step.className = 'prize-step';
+    const shortName = p.length > 22 ? p.substring(0, 20) + '..' : p;
+    step.textContent = (i + 1) + '. ' + shortName;
+    if (i < currentQuestion) step.classList.add('won');
+    if (i === currentQuestion) step.classList.add('active');
+    ladder.appendChild(step);
+  });
 }
 
 function showDialog(speaker, text) {
@@ -889,20 +979,56 @@ async function askQuestion() {
   const choicesEl = document.getElementById('choices');
   choicesEl.style.display = 'grid';
   choicesEl.innerHTML = '';
+  selectedChoice = 0;
+  choicesActive = true;
 
   const labels = ['A', 'B', 'C', 'D'];
   q.a.forEach((answer, i) => {
     const btn = document.createElement('button');
     btn.className = 'choice-btn';
+    if (i === 0) btn.classList.add('kb-selected');
     btn.innerHTML = `<span class="choice-label">${labels[i]}:</span> ${answer}`;
-    btn.onclick = () => selectAnswer(i);
+    btn.onclick = () => { if (choicesActive) confirmAnswer(i); };
+    btn.onmouseenter = () => { if (choicesActive) highlightChoice(i); };
     choicesEl.appendChild(btn);
   });
 }
 
-async function selectAnswer(index) {
+// Keyboard navigation state
+let selectedChoice = 0;
+let choicesActive = false;
+
+function highlightChoice(index) {
+  selectedChoice = index;
+  const btns = document.querySelectorAll('.choice-btn');
+  btns.forEach((b, i) => b.classList.toggle('kb-selected', i === index));
+}
+
+// "Final answer" confirmation
+async function confirmAnswer(index) {
+  choicesActive = false;
+  highlightChoice(index);
   sfxSelect();
+
+  const btns = document.querySelectorAll('.choice-btn');
+  btns[index].classList.add('locked');
+
+  // Show confirmation dialog over the choices
+  const box = document.getElementById('dialog-box');
+  box.style.display = 'block';
+  box.style.zIndex = '15';
+  await typeText(document.getElementById('dialog-text'), "Is that your FINAL ANSWER, Earth creature?!");
+  document.getElementById('dialog-speaker').textContent = 'ZORGBLAX:';
+  await waitForAdvance();
+  box.style.display = 'none';
+  box.style.zIndex = '10';
+
+  selectAnswer(index);
+}
+
+async function selectAnswer(index) {
   const choicesEl = document.getElementById('choices');
+  const dimOverlay = document.getElementById('dim-overlay');
 
   // Flash the selected answer
   const btns = choicesEl.querySelectorAll('.choice-btn');
@@ -911,26 +1037,46 @@ async function selectAnswer(index) {
       b.style.background = '#ffec27';
       b.style.color = '#000';
       b.style.borderColor = '#fff';
+      b.style.zIndex = '20';
+      b.style.position = 'relative';
     } else {
-      b.style.opacity = '0.3';
+      b.style.opacity = '0.2';
     }
-    b.onclick = null; // disable all buttons
+    b.onclick = null;
   });
-  await sleep(800);
-  choicesEl.style.display = 'none';
 
-  const q = QUESTIONS[currentQuestion];
+  // Dramatic dim
+  dimOverlay.classList.add('active');
+  await sleep(600);
 
   // Varied thinking line
+  choicesEl.style.display = 'none';
+  dimOverlay.classList.remove('active');
+  const q = QUESTIONS[currentQuestion];
   const thinkLine = THINKING_LINES[currentQuestion % THINKING_LINES.length];
   document.getElementById('alien-sprite').textContent = '🤔';
   await showDialog("ZORGBLAX", thinkLine);
-  await sleep(1800);
+  await sleep(2000);
+
+  // Drumroll tension (using audio)
+  for (let i = 0; i < 8; i++) {
+    setTimeout(() => playTone(100 + Math.random() * 50, 0.06, 'square', 0.04), i * 80);
+  }
+  await sleep(800);
 
   // Always "correct"
   sfxCorrect();
   document.getElementById('alien-sprite').textContent = '🥳';
-  await showDialog("ZORGBLAX", "CORRECT!!! (I think?!) You win " + PRIZES[currentQuestion] + "!");
+
+  const correctLines = [
+    "CORRECT!!! (I think?!)",
+    "YES!! That's what I had written down! *hides blank card*",
+    "ABSOLUTELY RIGHT!! ...probably! Who's keeping track?!",
+    "NAILED IT!! My answer tentacle confirms it!",
+    "CORRECT!! The Zorputer 3000 agrees! (it's just a box with a face drawn on it)"
+  ];
+  const correctLine = correctLines[Math.floor(Math.random() * correctLines.length)];
+  await showDialog("ZORGBLAX", correctLine + " You win " + PRIZES[currentQuestion] + "!");
   showAudienceBubble(Math.random() > 0.5 ? "WOOOOOOO!!" : "HOW?! IMPOSSIBLE!");
   await waitForAdvance();
 
