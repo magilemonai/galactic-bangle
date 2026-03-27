@@ -21,8 +21,8 @@
   }
 
   #screen {
-    width: 768px;
-    height: 720px;
+    width: 1024px;
+    height: 960px;
     background: #000;
     position: relative;
     overflow: hidden;
@@ -59,24 +59,24 @@
   }
   #title-screen h1 {
     color: #5eff3e;
-    font-size: 16px;
-    margin-top: 100px;
+    font-size: 20px;
+    margin-top: 130px;
     line-height: 2.2;
     text-shadow: 2px 2px #005500;
     position: relative;
     z-index: 2;
   }
   #title-screen h1 .big {
-    font-size: 26px;
+    font-size: 32px;
     color: #ffec27;
     display: block;
-    margin: 16px 0;
+    margin: 20px 0;
     text-shadow: 3px 3px #886600;
   }
   #title-screen .press-start {
     color: #fff;
-    font-size: 14px;
-    margin-top: 100px;
+    font-size: 18px;
+    margin-top: 120px;
     animation: blink 1s infinite;
     position: relative;
     z-index: 2;
@@ -84,9 +84,9 @@
   @keyframes blink { 0%,49%{opacity:1} 50%,100%{opacity:0} }
 
   #title-screen .alien-title {
-    font-size: 80px;
+    font-size: 100px;
     display: block;
-    margin: 24px 0;
+    margin: 30px 0;
     position: relative;
     z-index: 2;
   }
@@ -109,14 +109,14 @@
     transform: translateX(-50%);
     z-index: 10;
     color: #fff;
-    font-size: 12px;
+    font-size: 14px;
     text-align: center;
     line-height: 2.5;
     opacity: 0;
     transition: opacity 0.5s;
     background: rgba(0, 0, 0, 0.75);
     border: 3px solid #29adff;
-    padding: 16px 28px;
+    padding: 20px 32px;
     max-width: 85%;
     white-space: nowrap;
   }
@@ -187,8 +187,8 @@
   }
   #alien-canvas {
     image-rendering: pixelated;
-    width: 192px;
-    height: 240px;
+    width: 256px;
+    height: 320px;
     animation: alien-bob 1s ease-in-out infinite alternate;
   }
   @keyframes alien-bob {
@@ -202,8 +202,8 @@
   }
   .alien-name {
     color: #5eff3e;
-    font-size: 9px;
-    margin-top: 4px;
+    font-size: 11px;
+    margin-top: 6px;
   }
 
   /* Dialog box */
@@ -216,18 +216,18 @@
     border: 3px solid #5eff3e;
     padding: 16px 18px;
     color: #fff;
-    font-size: 12px;
+    font-size: 14px;
     line-height: 2;
-    min-height: 80px;
+    min-height: 90px;
     z-index: 10;
   }
   .dialog-box .speaker {
     color: #5eff3e;
-    margin-bottom: 6px;
+    margin-bottom: 8px;
   }
   .dialog-box .continue-prompt {
     color: #ffec27;
-    font-size: 9px;
+    font-size: 11px;
     text-align: right;
     margin-top: 6px;
     animation: blink 0.6s infinite;
@@ -240,8 +240,8 @@
     background: #222;
     border: 2px solid #ff6ee6;
     color: #ff6ee6;
-    font-size: 9px;
-    padding: 8px 14px;
+    font-size: 11px;
+    padding: 10px 16px;
     line-height: 1.8;
     z-index: 8;
     opacity: 0;
@@ -275,8 +275,8 @@
     border: 2px solid #7744aa;
     color: #fff;
     font-family: 'Press Start 2P', monospace;
-    font-size: 10px;
-    padding: 14px 12px;
+    font-size: 12px;
+    padding: 16px 14px;
     cursor: pointer;
     text-align: left;
     line-height: 1.8;
@@ -297,10 +297,10 @@
     top: 8px;
     left: 12px;
     color: #ff6ee6;
-    font-size: 10px;
+    font-size: 12px;
     z-index: 10;
     line-height: 2;
-    max-width: 260px;
+    max-width: 320px;
   }
 
   /* Prize ladder */
@@ -314,7 +314,7 @@
     gap: 2px;
   }
   .prize-step {
-    font-size: 7px;
+    font-size: 9px;
     color: #555;
     padding: 3px 6px;
     text-align: right;
@@ -375,7 +375,7 @@
     position: absolute;
     top: 30px;
     width: 100%;
-    font-size: 16px;
+    font-size: 22px;
     z-index: 20;
     text-shadow: 3px 3px #000;
     animation: dance-bounce 0.4s infinite alternate;
@@ -391,7 +391,7 @@
     top: 140px;
     width: 100%;
     color: #ffec27;
-    font-size: 13px;
+    font-size: 16px;
     z-index: 20;
     text-shadow: 3px 3px #000;
   }
@@ -401,14 +401,14 @@
     bottom: 0;
     width: 100%;
     color: #aaa;
-    font-size: 9px;
+    font-size: 11px;
     line-height: 2.5;
     z-index: 20;
-    animation: credits-scroll 18s linear infinite;
+    animation: credits-scroll 20s linear infinite;
   }
   @keyframes credits-scroll {
-    0% { transform: translateY(720px); }
-    100% { transform: translateY(-700px); }
+    0% { transform: translateY(960px); }
+    100% { transform: translateY(-900px); }
   }
 
   .play-again-btn {
@@ -420,8 +420,8 @@
     border: 3px solid #5eff3e;
     color: #5eff3e;
     font-family: 'Press Start 2P', monospace;
-    font-size: 13px;
-    padding: 16px 32px;
+    font-size: 16px;
+    padding: 18px 36px;
     cursor: pointer;
     z-index: 30;
     animation: blink 1s infinite;
@@ -456,12 +456,12 @@
   </div>
 
   <!-- Iris transition overlay (used between all scenes) -->
-  <canvas id="iris-overlay" width="768" height="720"></canvas>
+  <canvas id="iris-overlay" width="1024" height="960"></canvas>
 
   <!-- GAME SCREEN -->
   <div id="game-screen" class="scene">
     <canvas id="stage-canvas" width="256" height="240"></canvas>
-    <canvas id="particle-canvas" width="768" height="720"></canvas>
+    <canvas id="particle-canvas" width="1024" height="960"></canvas>
     <div class="dim-overlay" id="dim-overlay"></div>
     <div class="hud-left" id="hud-left"></div>
     <div class="prize-ladder" id="prize-ladder"></div>
@@ -888,20 +888,20 @@ setInterval(() => { if (alienCanvas) drawAlien(alienExpression); }, 300);
 function initStars() {
   const canvas = document.getElementById('stars-canvas');
   const ctx = canvas.getContext('2d');
-  canvas.width = 768;
-  canvas.height = 720;
+  canvas.width = 1024;
+  canvas.height = 960;
   const stars = Array.from({ length: 120 }, () => ({
-    x: Math.random() * 768, y: Math.random() * 720,
+    x: Math.random() * 1024, y: Math.random() * 960,
     s: Math.random() * 2 + 1, speed: Math.random() * 0.5 + 0.2
   }));
   function draw() {
     ctx.fillStyle = '#000';
-    ctx.fillRect(0, 0, 768, 720);
+    ctx.fillRect(0, 0, 1024, 960);
     stars.forEach(s => {
       ctx.fillStyle = `hsl(${Math.random() * 60 + 100}, 80%, ${60 + Math.random() * 40}%)`;
       ctx.fillRect(s.x, s.y, s.s, s.s);
       s.y += s.speed;
-      if (s.y > 720) { s.y = 0; s.x = Math.random() * 768; }
+      if (s.y > 960) { s.y = 0; s.x = Math.random() * 1024; }
     });
     requestAnimationFrame(draw);
   }
@@ -1030,21 +1030,21 @@ function irisWipe(closing = true, duration = 600) {
     const canvas = document.getElementById('iris-overlay');
     const ctx = canvas.getContext('2d');
     canvas.style.display = 'block';
-    const cx = 384, cy = 360;
+    const cx = 512, cy = 480;
     const maxR = Math.sqrt(cx * cx + cy * cy);
     const startTime = Date.now();
 
     function draw() {
       const elapsed = Date.now() - startTime;
       const progress = Math.min(elapsed / duration, 1);
-      ctx.clearRect(0, 0, 768, 720);
+      ctx.clearRect(0, 0, 1024, 960);
 
       const radius = closing
         ? maxR * (1 - progress)
         : maxR * progress;
 
       ctx.fillStyle = '#000';
-      ctx.fillRect(0, 0, 768, 720);
+      ctx.fillRect(0, 0, 1024, 960);
       ctx.globalCompositeOperation = 'destination-out';
       ctx.beginPath();
       ctx.arc(cx, cy, radius, 0, Math.PI * 2);
@@ -1327,7 +1327,7 @@ updateParticles();
 
 // Sparkle burst on correct answer
 function correctParticles() {
-  spawnParticles(384, 350, 30, ['#ffec27','#5eff3e','#ff6ee6','#29adff','#fff'], 5);
+  spawnParticles(512, 450, 40, ['#ffec27','#5eff3e','#ff6ee6','#29adff','#fff'], 6);
 }
 
 function buildStage() {
@@ -1513,7 +1513,7 @@ let currentQuestion = 0;
 function showAudienceBubble(text) {
   const bubble = document.getElementById('audience-bubble');
   bubble.textContent = text;
-  bubble.style.left = (80 + Math.random() * 450) + 'px';
+  bubble.style.left = (100 + Math.random() * 600) + 'px';
   bubble.classList.add('visible');
   setTimeout(() => bubble.classList.remove('visible'), 2500);
 }
@@ -1713,7 +1713,7 @@ async function selectAnswer(index) {
   setAlienExpression('neutral');
   currentQuestion++;
   if (currentQuestion >= QUESTIONS.length) {
-    startDanceParty();
+    await startDanceParty();
   } else {
     askQuestion();
   }
@@ -1722,18 +1722,32 @@ async function selectAnswer(index) {
 // ===== DANCE PARTY =====
 // ===== DANCE PARTY CANVAS =====
 let danceActive = false;
+let discoBallY = -30;
+let discoBallTargetY = 40;
+let discoBallDropping = false;
 const danceColors = ['#ff004d','#ffec27','#5eff3e','#29adff','#ff6ee6','#ff77a8','#ffa300','#7e2553'];
 
 // Pixel art dancer sprites (simple 2-frame animation)
+// Zorgblax is the big center dancer!
 const dancerSprites = [];
+// Regular dancers around the edges
 for (let i = 0; i < 10; i++) {
   dancerSprites.push({
-    x: 20 + (i % 5) * 46,
-    y: 140 + Math.floor(i / 5) * 50,
+    x: 15 + (i % 5) * 48,
+    y: 150 + Math.floor(i / 5) * 50,
     color: danceColors[i % danceColors.length],
     frame: 0,
+    isZorgblax: false,
   });
 }
+// Zorgblax center stage!
+dancerSprites.push({
+  x: 112,
+  y: 120,
+  color: '#5eff3e',
+  frame: 0,
+  isZorgblax: true,
+});
 
 function drawDanceParty(ctx, time) {
   ctx.clearRect(0, 0, 256, 240);
@@ -1750,8 +1764,17 @@ function drawDanceParty(ctx, time) {
   }
   ctx.globalAlpha = 1;
 
+  // Animate disco ball drop
+  if (discoBallDropping) {
+    discoBallY += (discoBallTargetY - discoBallY) * 0.04;
+    if (Math.abs(discoBallY - discoBallTargetY) < 0.5) {
+      discoBallY = discoBallTargetY;
+      discoBallDropping = false;
+    }
+  }
+
   // Disco ball
-  const ballX = 128, ballY = 30, ballR = 14;
+  const ballX = 128, ballY = discoBallY, ballR = 14;
   // String
   ctx.strokeStyle = '#888';
   ctx.lineWidth = 1;
@@ -1794,29 +1817,76 @@ function drawDanceParty(ctx, time) {
     const dx = d.x;
     const dy = d.y + bob;
 
-    // Head
-    ctx.fillStyle = d.color;
-    ctx.fillRect(dx, dy, 6, 5);
-    // Eyes
-    ctx.fillStyle = '#fff';
-    ctx.fillRect(dx + 1, dy + 1, 1, 1);
-    ctx.fillRect(dx + 4, dy + 1, 1, 1);
-    // Body
-    ctx.fillStyle = d.color;
-    ctx.fillRect(dx - 1, dy + 5, 8, 8);
-
-    // Arms (alternating frames)
-    if (frame === 0) {
-      ctx.fillRect(dx - 3, dy + 4, 2, 5);  // left arm down
-      ctx.fillRect(dx + 7, dy + 2, 2, 5);  // right arm up-ish
+    if (d.isZorgblax) {
+      // ZORGBLAX - big center dancer!
+      const s = 2; // scale multiplier
+      // Antenna
+      ctx.fillStyle = '#29adff';
+      ctx.fillRect(dx + 2*s, dy - 4*s, s, 3*s);
+      ctx.fillRect(dx + 7*s, dy - 4*s, s, 3*s);
+      const glowFrame = Math.floor(time * 6) % 2;
+      ctx.fillStyle = glowFrame ? '#fff' : '#29adff';
+      ctx.fillRect(dx + 1*s, dy - 5*s, s, s);
+      ctx.fillRect(dx + 8*s, dy - 5*s, s, s);
+      // Head
+      ctx.fillStyle = '#5eff3e';
+      ctx.fillRect(dx, dy - 1*s, 10*s, 7*s);
+      // Eyes (big, excited)
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(dx + 2*s, dy, 2*s, 2*s);
+      ctx.fillRect(dx + 6*s, dy, 2*s, 2*s);
+      ctx.fillStyle = '#ff004d';
+      ctx.fillRect(dx + 2*s, dy, s, s);
+      ctx.fillRect(dx + 7*s, dy, s, s);
+      // Big grin
+      ctx.fillStyle = '#1a0033';
+      ctx.fillRect(dx + 1*s, dy + 4*s, 8*s, 2*s);
+      ctx.fillStyle = '#ffec27';
+      ctx.fillRect(dx + 2*s, dy + 4*s, 6*s, s);
+      // Body / suit
+      ctx.fillStyle = '#7e2553';
+      ctx.fillRect(dx + s, dy + 6*s, 8*s, 6*s);
+      ctx.fillStyle = '#a8437a';
+      ctx.fillRect(dx + 3*s, dy + 6*s, 4*s, s);
+      // Arms (dancing!)
+      ctx.fillStyle = '#5eff3e';
+      if (frame === 0) {
+        ctx.fillRect(dx - 2*s, dy + 3*s, 2*s, 4*s);  // left up
+        ctx.fillRect(dx + 10*s, dy + 6*s, 2*s, 4*s);  // right down
+      } else {
+        ctx.fillRect(dx - 2*s, dy + 6*s, 2*s, 4*s);  // left down
+        ctx.fillRect(dx + 10*s, dy + 3*s, 2*s, 4*s);  // right up
+      }
+      // Legs
+      ctx.fillStyle = '#1a0033';
+      ctx.fillRect(dx + 2*s, dy + 12*s, 2*s, 3*s);
+      ctx.fillRect(dx + 6*s, dy + 12*s, 2*s, 3*s);
     } else {
-      ctx.fillRect(dx - 3, dy + 2, 2, 5);  // left arm up-ish
-      ctx.fillRect(dx + 7, dy + 4, 2, 5);  // right arm down
+      // Regular dancer
+      // Head
+      ctx.fillStyle = d.color;
+      ctx.fillRect(dx, dy, 6, 5);
+      // Eyes
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(dx + 1, dy + 1, 1, 1);
+      ctx.fillRect(dx + 4, dy + 1, 1, 1);
+      // Body
+      ctx.fillStyle = d.color;
+      ctx.fillRect(dx - 1, dy + 5, 8, 8);
+
+      // Arms (alternating frames)
+      if (frame === 0) {
+        ctx.fillRect(dx - 3, dy + 4, 2, 5);  // left arm down
+        ctx.fillRect(dx + 7, dy + 2, 2, 5);  // right arm up-ish
+      } else {
+        ctx.fillRect(dx - 3, dy + 2, 2, 5);  // left arm up-ish
+        ctx.fillRect(dx + 7, dy + 4, 2, 5);  // right arm down
+      }
+      // Legs
+      ctx.fillStyle = '#1a0033';
+      ctx.fillRect(dx, dy + 13, 2, 4);
+      ctx.fillRect(dx + 4, dy + 13, 2, 4);
     }
-    // Legs
-    ctx.fillStyle = '#1a0033';
-    ctx.fillRect(dx, dy + 13, 2, 4);
-    ctx.fillRect(dx + 4, dy + 13, 2, 4);
   });
 
   // Fireworks (periodic bursts)
@@ -1854,12 +1924,26 @@ function animateDance() {
   requestAnimationFrame(animateDance);
 }
 
-function startDanceParty() {
+async function startDanceParty() {
+  // Zorgblax announces the dance party BEFORE transitioning
+  setAlienExpression('celebrating');
+  await showDialog("ZORGBLAX", "YOU DID IT!! YOU ARE A CERTIFIED BLORGINAIRE!!");
+  await waitForAdvance();
+  await showDialog("ZORGBLAX", "And you know what THAT means...");
+  await waitForAdvance();
+  await showDialog("ZORGBLAX", "EVERYBODY DANCE!! EVEN ME!! ESPECIALLY ME!!!");
+  await waitForAdvance();
+
   stageAnimActive = false;
+  await irisWipe(true, 400);
   showScene('dance-screen');
   sfxDance();
   danceActive = true;
+  discoBallY = -30; // start off screen
+  discoBallTargetY = 40;
+  discoBallDropping = true;
   animateDance();
+  await irisWipe(false, 400);
 
   // Rainbow cycling text
   const textEl = document.getElementById('dance-text');
@@ -1913,6 +1997,19 @@ function startDanceParty() {
 
 // ===== INIT =====
 initStars();
+
+// Start title music on first user interaction (audio context requires gesture)
+let titleMusicStarted = false;
+function startTitleMusicOnce() {
+  if (titleMusicStarted) return;
+  titleMusicStarted = true;
+  ensureAudio();
+  sfxTitleMusic();
+}
+document.addEventListener('click', startTitleMusicOnce, { once: false });
+document.addEventListener('keydown', startTitleMusicOnce, { once: false });
+// Also listen for mousemove as a fallback to get music going
+document.addEventListener('mousemove', startTitleMusicOnce, { once: true });
 
 document.getElementById('title-screen').addEventListener('click', () => {
   ensureAudio();
