@@ -21,8 +21,8 @@
   }
 
   #screen {
-    width: 512px;
-    height: 480px;
+    width: 768px;
+    height: 720px;
     background: #000;
     position: relative;
     overflow: hidden;
@@ -59,24 +59,24 @@
   }
   #title-screen h1 {
     color: #5eff3e;
-    font-size: 11px;
-    margin-top: 80px;
+    font-size: 16px;
+    margin-top: 100px;
     line-height: 2.2;
     text-shadow: 2px 2px #005500;
     position: relative;
     z-index: 2;
   }
   #title-screen h1 .big {
-    font-size: 18px;
+    font-size: 26px;
     color: #ffec27;
     display: block;
-    margin: 12px 0;
-    text-shadow: 2px 2px #886600;
+    margin: 16px 0;
+    text-shadow: 3px 3px #886600;
   }
   #title-screen .press-start {
     color: #fff;
-    font-size: 10px;
-    margin-top: 80px;
+    font-size: 14px;
+    margin-top: 100px;
     animation: blink 1s infinite;
     position: relative;
     z-index: 2;
@@ -84,9 +84,9 @@
   @keyframes blink { 0%,49%{opacity:1} 50%,100%{opacity:0} }
 
   #title-screen .alien-title {
-    font-size: 60px;
+    font-size: 80px;
     display: block;
-    margin: 20px 0;
+    margin: 24px 0;
     position: relative;
     z-index: 2;
   }
@@ -104,16 +104,21 @@
   }
   #wormhole-text {
     position: absolute;
-    bottom: 40px;
-    left: 0; right: 0;
+    bottom: 60px;
+    left: 50%;
+    transform: translateX(-50%);
     z-index: 10;
     color: #fff;
-    font-size: 8px;
+    font-size: 12px;
     text-align: center;
     line-height: 2.5;
     opacity: 0;
     transition: opacity 0.5s;
-    text-shadow: 1px 1px #000, -1px -1px #000;
+    background: rgba(0, 0, 0, 0.75);
+    border: 3px solid #29adff;
+    padding: 16px 28px;
+    max-width: 85%;
+    white-space: nowrap;
   }
   #wormhole-text.visible { opacity: 1; }
 
@@ -174,7 +179,7 @@
   /* Alien host */
   .alien-host {
     position: absolute;
-    top: 18px;
+    top: 24px;
     left: 50%;
     transform: translateX(-50%);
     text-align: center;
@@ -182,6 +187,8 @@
   }
   #alien-canvas {
     image-rendering: pixelated;
+    width: 192px;
+    height: 240px;
     animation: alien-bob 1s ease-in-out infinite alternate;
   }
   @keyframes alien-bob {
@@ -195,46 +202,46 @@
   }
   .alien-name {
     color: #5eff3e;
-    font-size: 7px;
-    margin-top: 2px;
+    font-size: 9px;
+    margin-top: 4px;
   }
 
   /* Dialog box */
   .dialog-box {
     position: absolute;
-    bottom: 55px;
-    left: 16px;
-    right: 16px;
+    bottom: 80px;
+    left: 24px;
+    right: 24px;
     background: #111;
     border: 3px solid #5eff3e;
-    padding: 12px;
+    padding: 16px 18px;
     color: #fff;
-    font-size: 8px;
+    font-size: 12px;
     line-height: 2;
-    min-height: 60px;
+    min-height: 80px;
     z-index: 10;
   }
   .dialog-box .speaker {
     color: #5eff3e;
-    margin-bottom: 4px;
+    margin-bottom: 6px;
   }
   .dialog-box .continue-prompt {
     color: #ffec27;
-    font-size: 6px;
+    font-size: 9px;
     text-align: right;
-    margin-top: 4px;
+    margin-top: 6px;
     animation: blink 0.6s infinite;
   }
 
   /* Audience speech bubble */
   .audience-bubble {
     position: absolute;
-    bottom: 52px;
+    bottom: 10px;
     background: #222;
     border: 2px solid #ff6ee6;
     color: #ff6ee6;
-    font-size: 6px;
-    padding: 6px 10px;
+    font-size: 9px;
+    padding: 8px 14px;
     line-height: 1.8;
     z-index: 8;
     opacity: 0;
@@ -255,21 +262,21 @@
   /* Answer choices */
   .choices {
     position: absolute;
-    bottom: 55px;
-    left: 16px;
-    right: 16px;
+    bottom: 80px;
+    left: 24px;
+    right: 24px;
     z-index: 10;
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 6px;
+    gap: 8px;
   }
   .choice-btn {
     background: #1a0044;
     border: 2px solid #7744aa;
     color: #fff;
     font-family: 'Press Start 2P', monospace;
-    font-size: 7px;
-    padding: 10px 8px;
+    font-size: 10px;
+    padding: 14px 12px;
     cursor: pointer;
     text-align: left;
     line-height: 1.8;
@@ -285,44 +292,31 @@
   }
 
   /* Question counter / prize ladder */
-  .hud {
-    position: absolute;
-    top: 4px;
-    right: 8px;
-    color: #ffec27;
-    font-size: 7px;
-    z-index: 10;
-    text-align: right;
-    line-height: 2;
-  }
-  .hud .prize {
-    color: #5eff3e;
-  }
-
   .hud-left {
     position: absolute;
-    top: 4px;
-    left: 8px;
+    top: 8px;
+    left: 12px;
     color: #ff6ee6;
-    font-size: 7px;
+    font-size: 10px;
     z-index: 10;
     line-height: 2;
+    max-width: 260px;
   }
 
   /* Prize ladder */
   .prize-ladder {
     position: absolute;
-    top: 20px;
-    right: 4px;
+    top: 10px;
+    right: 8px;
     z-index: 10;
     display: flex;
     flex-direction: column-reverse;
-    gap: 1px;
+    gap: 2px;
   }
   .prize-step {
-    font-size: 5px;
+    font-size: 7px;
     color: #555;
-    padding: 2px 4px;
+    padding: 3px 6px;
     text-align: right;
     transition: all 0.3s;
     white-space: nowrap;
@@ -379,11 +373,11 @@
   }
   .dance-text {
     position: absolute;
-    top: 20px;
+    top: 30px;
     width: 100%;
-    font-size: 11px;
+    font-size: 16px;
     z-index: 20;
-    text-shadow: 2px 2px #000;
+    text-shadow: 3px 3px #000;
     animation: dance-bounce 0.4s infinite alternate;
     line-height: 2.8;
   }
@@ -394,12 +388,12 @@
 
   .zorpbuck-counter {
     position: absolute;
-    top: 100px;
+    top: 140px;
     width: 100%;
     color: #ffec27;
-    font-size: 9px;
+    font-size: 13px;
     z-index: 20;
-    text-shadow: 2px 2px #000;
+    text-shadow: 3px 3px #000;
   }
 
   .credits {
@@ -407,27 +401,27 @@
     bottom: 0;
     width: 100%;
     color: #aaa;
-    font-size: 6px;
+    font-size: 9px;
     line-height: 2.5;
     z-index: 20;
-    animation: credits-scroll 15s linear infinite;
+    animation: credits-scroll 18s linear infinite;
   }
   @keyframes credits-scroll {
-    0% { transform: translateY(480px); }
-    100% { transform: translateY(-500px); }
+    0% { transform: translateY(720px); }
+    100% { transform: translateY(-700px); }
   }
 
   .play-again-btn {
     position: absolute;
-    bottom: 10px;
+    bottom: 20px;
     left: 50%;
     transform: translateX(-50%);
     background: #1a0044;
     border: 3px solid #5eff3e;
     color: #5eff3e;
     font-family: 'Press Start 2P', monospace;
-    font-size: 9px;
-    padding: 12px 24px;
+    font-size: 13px;
+    padding: 16px 32px;
     cursor: pointer;
     z-index: 30;
     animation: blink 1s infinite;
@@ -462,17 +456,17 @@
   </div>
 
   <!-- Iris transition overlay (used between all scenes) -->
-  <canvas id="iris-overlay" width="512" height="480"></canvas>
+  <canvas id="iris-overlay" width="768" height="720"></canvas>
 
   <!-- GAME SCREEN -->
   <div id="game-screen" class="scene">
     <canvas id="stage-canvas" width="256" height="240"></canvas>
-    <canvas id="particle-canvas" width="512" height="480"></canvas>
+    <canvas id="particle-canvas" width="768" height="720"></canvas>
     <div class="dim-overlay" id="dim-overlay"></div>
     <div class="hud-left" id="hud-left"></div>
     <div class="prize-ladder" id="prize-ladder"></div>
     <div class="alien-host">
-      <canvas id="alien-canvas" width="64" height="80" style="width:128px;height:160px;"></canvas>
+      <canvas id="alien-canvas" width="64" height="80"></canvas>
       <div class="alien-name">ZORGBLAX THE MAGNIFICENT</div>
     </div>
     <div class="dialog-box" id="dialog-box" style="display:none;">
@@ -894,20 +888,20 @@ setInterval(() => { if (alienCanvas) drawAlien(alienExpression); }, 300);
 function initStars() {
   const canvas = document.getElementById('stars-canvas');
   const ctx = canvas.getContext('2d');
-  canvas.width = 512;
-  canvas.height = 480;
-  const stars = Array.from({ length: 80 }, () => ({
-    x: Math.random() * 512, y: Math.random() * 480,
+  canvas.width = 768;
+  canvas.height = 720;
+  const stars = Array.from({ length: 120 }, () => ({
+    x: Math.random() * 768, y: Math.random() * 720,
     s: Math.random() * 2 + 1, speed: Math.random() * 0.5 + 0.2
   }));
   function draw() {
     ctx.fillStyle = '#000';
-    ctx.fillRect(0, 0, 512, 480);
+    ctx.fillRect(0, 0, 768, 720);
     stars.forEach(s => {
       ctx.fillStyle = `hsl(${Math.random() * 60 + 100}, 80%, ${60 + Math.random() * 40}%)`;
       ctx.fillRect(s.x, s.y, s.s, s.s);
       s.y += s.speed;
-      if (s.y > 480) { s.y = 0; s.x = Math.random() * 512; }
+      if (s.y > 720) { s.y = 0; s.x = Math.random() * 768; }
     });
     requestAnimationFrame(draw);
   }
@@ -1036,21 +1030,21 @@ function irisWipe(closing = true, duration = 600) {
     const canvas = document.getElementById('iris-overlay');
     const ctx = canvas.getContext('2d');
     canvas.style.display = 'block';
-    const cx = 256, cy = 240;
+    const cx = 384, cy = 360;
     const maxR = Math.sqrt(cx * cx + cy * cy);
     const startTime = Date.now();
 
     function draw() {
       const elapsed = Date.now() - startTime;
       const progress = Math.min(elapsed / duration, 1);
-      ctx.clearRect(0, 0, 512, 480);
+      ctx.clearRect(0, 0, 768, 720);
 
       const radius = closing
         ? maxR * (1 - progress)
         : maxR * progress;
 
       ctx.fillStyle = '#000';
-      ctx.fillRect(0, 0, 512, 480);
+      ctx.fillRect(0, 0, 768, 720);
       ctx.globalCompositeOperation = 'destination-out';
       ctx.beginPath();
       ctx.arc(cx, cy, radius, 0, Math.PI * 2);
@@ -1315,7 +1309,7 @@ function spawnParticles(x, y, count, colors, speed = 3) {
 
 function updateParticles() {
   if (!particleCtx) return;
-  particleCtx.clearRect(0, 0, 512, 480);
+  particleCtx.clearRect(0, 0, 768, 720);
   particles = particles.filter(p => p.life > 0);
   particles.forEach(p => {
     p.x += p.vx;
@@ -1333,7 +1327,7 @@ updateParticles();
 
 // Sparkle burst on correct answer
 function correctParticles() {
-  spawnParticles(256, 200, 30, ['#ffec27','#5eff3e','#ff6ee6','#29adff','#fff'], 4);
+  spawnParticles(384, 350, 30, ['#ffec27','#5eff3e','#ff6ee6','#29adff','#fff'], 5);
 }
 
 function buildStage() {
@@ -1519,7 +1513,7 @@ let currentQuestion = 0;
 function showAudienceBubble(text) {
   const bubble = document.getElementById('audience-bubble');
   bubble.textContent = text;
-  bubble.style.left = (60 + Math.random() * 300) + 'px';
+  bubble.style.left = (80 + Math.random() * 450) + 'px';
   bubble.classList.add('visible');
   setTimeout(() => bubble.classList.remove('visible'), 2500);
 }
