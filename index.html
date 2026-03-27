@@ -197,6 +197,39 @@
     color: #5eff3e;
     margin-bottom: 4px;
   }
+  .dialog-box .continue-prompt {
+    color: #ffec27;
+    font-size: 6px;
+    text-align: right;
+    margin-top: 4px;
+    animation: blink 0.6s infinite;
+  }
+
+  /* Audience speech bubble */
+  .audience-bubble {
+    position: absolute;
+    bottom: 52px;
+    background: #222;
+    border: 2px solid #ff6ee6;
+    color: #ff6ee6;
+    font-size: 6px;
+    padding: 6px 10px;
+    line-height: 1.8;
+    z-index: 8;
+    opacity: 0;
+    transition: opacity 0.3s;
+    white-space: nowrap;
+  }
+  .audience-bubble.visible { opacity: 1; }
+  .audience-bubble::after {
+    content: '';
+    position: absolute;
+    bottom: -6px;
+    left: 20px;
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-top: 6px solid #ff6ee6;
+  }
 
   /* Answer choices */
   .choices {
@@ -370,8 +403,10 @@
     <div class="dialog-box" id="dialog-box" style="display:none;">
       <div class="speaker" id="dialog-speaker"></div>
       <div id="dialog-text"></div>
+      <div class="continue-prompt" style="display:none;">&#x25BC; CLICK or PRESS SPACE</div>
     </div>
     <div class="choices" id="choices" style="display:none;"></div>
+    <div class="audience-bubble" id="audience-bubble"></div>
     <div class="audience" id="audience"></div>
   </div>
 
@@ -453,11 +488,23 @@ function showScene(id) {
 }
 
 // ===== TYPEWRITER =====
+let typewriterSkip = false;
+let typewriterResolve = null;
+
 function typeText(el, text, speed = 35) {
   return new Promise(resolve => {
     el.textContent = '';
+    typewriterSkip = false;
+    typewriterResolve = null;
     let i = 0;
     const interval = setInterval(() => {
+      if (typewriterSkip) {
+        el.textContent = text;
+        clearInterval(interval);
+        typewriterSkip = false;
+        resolve();
+        return;
+      }
       el.textContent += text[i];
       if (i % 2 === 0) playTone(440 + Math.random() * 100, 0.03, 'square', 0.03);
       i++;
@@ -465,6 +512,58 @@ function typeText(el, text, speed = 35) {
     }, speed);
   });
 }
+
+// Click/key to advance dialog
+let waitingForAdvance = false;
+function waitForAdvance() {
+  return new Promise(resolve => {
+    waitingForAdvance = true;
+    typewriterResolve = resolve;
+    // Show continue prompt
+    const prompt = document.querySelector('.continue-prompt');
+    if (prompt) prompt.style.display = 'block';
+  });
+}
+
+document.addEventListener('click', (e) => {
+  if (e.target.closest('.choice-btn') || e.target.closest('.play-again-btn') || e.target.closest('#title-screen')) return;
+  if (waitingForAdvance && typewriterResolve) {
+    waitingForAdvance = false;
+    const prompt = document.querySelector('.continue-prompt');
+    if (prompt) prompt.style.display = 'none';
+    sfxSelect();
+    typewriterResolve();
+    typewriterResolve = null;
+  } else {
+    typewriterSkip = true;
+  }
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' || e.key === ' ') {
+    // Title screen start
+    const title = document.getElementById('title-screen');
+    if (title.classList.contains('active')) {
+      e.preventDefault();
+      ensureAudio();
+      sfxSelect();
+      playWormhole();
+      return;
+    }
+    // Dialog advance
+    if (waitingForAdvance && typewriterResolve) {
+      e.preventDefault();
+      waitingForAdvance = false;
+      const prompt = document.querySelector('.continue-prompt');
+      if (prompt) prompt.style.display = 'none';
+      sfxSelect();
+      typewriterResolve();
+      typewriterResolve = null;
+    } else {
+      typewriterSkip = true;
+    }
+  }
+});
 
 // ===== WORMHOLE SEQUENCE =====
 async function playWormhole() {
@@ -539,64 +638,183 @@ const QUESTIONS = [
   {
     q: "Human greeting ritual: What is a 'handshake'?",
     a: ["Two humans linking tentacles","A seizure of the upper limb","Checking each other for weapons","A mating display involving palms"],
+    reactions: [
+      "LINKING TENTACLES?! How intimate! On my planet that means you're MARRIED now!",
+      "A SEIZURE?! And you do this ON PURPOSE?! Humans are braver than I thought!",
+      "WEAPONS CHECK!! I knew humans were paranoid! Very wise, very wise...",
+      "A MATING DISPLAY?! So THAT'S why my Earth ambassador kept shaking hands with everyone! SECURITY!!"
+    ],
     reaction: "Fascinating!! On my planet we greet by spitting acid. Much more efficient!"
   },
   {
     q: "Why do humans stare at small glowing rectangles for 8 hours daily?",
     a: ["Recharging their life force","Worshipping their silicon overlords","They forgot how to look up","The rectangles contain tiny prisoners they must watch"],
+    reactions: [
+      "RECHARGING!! So humans ARE partially electronic! My thesis was RIGHT!",
+      "SILICON OVERLORDS! I must warn the Galactic Council about Earth's REAL rulers!",
+      "They FORGOT?! How do you forget an ENTIRE DIRECTION?! Earth schooling must be terrible!",
+      "TINY PRISONERS!! That's horrifying! ...Can I see them? For research purposes."
+    ],
     reaction: "I KNEW IT! The rectangles are in charge!! I must warn the Galactic Council!"
   },
   {
     q: "What is the human food known as 'pizza'?",
     a: ["A circular debt arrangement","Flattened wheat with old milk on top","A peace treaty you eat","An edible flying saucer prototype"],
+    reactions: [
+      "A DEBT CIRCLE?! So your economy runs on cheese and bread?! ...Actually that explains a LOT.",
+      "OLD MILK ON WHEAT?! When you describe it like that, I'm HORRIFIED. But also hungry??",
+      "AN EDIBLE PEACE TREATY!! No wonder wars start when someone takes the last slice!",
+      "EDIBLE SAUCERS!! You EAT your spacecraft prototypes?! No wonder you haven't left your solar system!"
+    ],
     reaction: "You EAT your flying saucers?! No wonder you haven't achieved light speed!"
   },
   {
     q: "Why do humans voluntarily enter a 'gym'?",
     a: ["Punishment for eating too much pizza","To practice lifting things and putting them down","A cult that worships mirrors","They enjoy suffering in spandex"],
+    reactions: [
+      "So the pizza creates GUILT and the gym absolves it?! It's a RELIGION! The Church of Cardio!",
+      "LIFTING AND PUTTING DOWN!! You could at least MOVE the things somewhere useful! Build a HOUSE!",
+      "A MIRROR CULT!! That explains why they keep looking at themselves! The ritual makes sense now!",
+      "SUFFERING IN SPANDEX!! On my planet that's a war crime! You do this VOLUNTARILY?!"
+    ],
     reaction: "LIFTING THINGS AND PUTTING THEM BACK?! Your species is magnificently pointless!"
   },
   {
     q: "What is a 'cat' and why does it control the household?",
     a: ["A tiny furry dictator","Earth's true dominant species","A loaf of bread that judges you","A government surveillance device that purrs"],
+    reactions: [
+      "A FURRY DICTATOR!! I've met a few of those at Galactic Summits. They're the WORST at diplomacy!",
+      "THE DOMINANT SPECIES!! I've been negotiating with the WRONG CREATURES this entire time!!",
+      "JUDGMENTAL BREAD!! Earth food has OPINIONS?! Does the pizza judge you too?!",
+      "A PURRING SPY DEVICE!! Your governments are cleverer than we thought! We must sweep for cats IMMEDIATELY!"
+    ],
     reaction: "So cats ARE the real leaders! I should have been negotiating with THEM this whole time!"
   },
   {
     q: "Explain the human ritual known as 'Monday'.",
     a: ["A weekly punishment from the sun god","The day humans collectively pretend to work","When Earth's rotation feels 47% slower","A shared hallucination of misery"],
+    reactions: [
+      "A SUN GOD PUNISHMENT!! Which sun god?! We have 14 in our system and NONE of them are this cruel!",
+      "PRETENDING TO WORK?! So Mondays are performance art?! Humans are more creative than I realized!",
+      "47% SLOWER?! That's a PHYSICS VIOLATION! I'm reporting Earth to the Dimension Standards Board!",
+      "A SHARED HALLUCINATION!! Impressive! On my planet it takes DRUGS to do that! You do it for FREE!"
+    ],
     reaction: "On my planet EVERY day is Monday. That explains why we conquered 12 galaxies out of sheer rage!"
   },
   {
     q: "What happens during a human 'traffic jam'?",
     a: ["Thousands sit in metal boxes screaming","A failed attempt at group meditation","Humans practice patience (badly)","Cars form a hive mind that decides to stop"],
+    reactions: [
+      "SCREAMING IN BOXES!! On my planet we call that 'prison'! You do it DAILY?! FOR FREE?!",
+      "FAILED MEDITATION!! So close to enlightenment yet SO FAR! The honking must break concentration!",
+      "PATIENCE PRACTICE!! With a 97% failure rate, I'd say your species needs MORE practice!",
+      "A CAR HIVE MIND!! The vehicles are SENTIENT?! First the rectangles, now the CARS?! Who actually runs Earth?!"
+    ],
     reaction: "YOU JUST SIT THERE?! Why not activate your car's warp drive?! Oh... oh no. You DON'T HAVE THOSE?!"
   },
   {
     q: "Why do humans expel air from their nose holes when amused?",
     a: ["Laughter is a factory reset","Their humor gland overflows","It prevents their head from exploding","Nobody knows. Not even humans."],
+    reactions: [
+      "A FACTORY RESET!! So comedians are basically IT support for humans?! Reboot via joke!",
+      "THE HUMOR GLAND!! Where is it located?! I've been dissecting-- I mean STUDYING humans for YEARS!",
+      "EXPLOSION PREVENTION!! I've been dangerously close to laughing lately! *holds head nervously*",
+      "EVEN HUMANS DON'T KNOW?! A whole species doing something and NOBODY knows why?! INCREDIBLE!"
+    ],
     reaction: "HEAD EXPLOSION PREVENTION!! I have been dangerously close! *nervous alien laughter*"
   },
   {
     q: "What is 'sleeping' and why do humans do it EVERY SINGLE DAY?",
     a: ["A nightly death rehearsal","Humans are solar powered with bad batteries","Their brains need to defragment","Practicing being furniture"],
+    reactions: [
+      "DEATH REHEARSAL!! You practice DYING every night?! That's the most metal thing I've ever heard!",
+      "BAD BATTERIES!! Have you tried plugging in?! Oh wait... you don't have charging ports. Tragic.",
+      "BRAIN DEFRAG!! So without sleep you get... corrupted humans?! That explains your politicians!",
+      "PRACTICING BEING FURNITURE!! So when humans say they're 'dead tired' they become a COUCH?! Amazing!"
+    ],
     reaction: "YOU SHUT DOWN FOR 8 HOURS?! You're basically OFF for a third of your life!! MY SPECIES WILL NOTE THIS VULNERABILITY... I mean... how cute!"
   },
   {
     q: "FINAL QUESTION: What is the meaning of human existence?",
     a: ["42","To make memes and eat snacks","Nobody knows but they're very loud about it","To boldly argue about pineapple on pizza"],
+    reactions: [
+      "42!! That's the EXACT number of times I've asked this question and gotten a DIFFERENT answer!",
+      "MEMES AND SNACKS!! Honestly? That might be the most honest answer in the HISTORY of this show!",
+      "LOUD AND CLUELESS!! That's basically the human motto! I'm putting that on Earth's Galactic Profile!",
+      "THE PINEAPPLE WARS!! I've read about this in our intelligence reports! It almost destroyed a continent!"
+    ],
     reaction: "ALL ANSWERS ARE CORRECT!! Honestly I wrote these questions 10 minutes ago in the space-bathroom. I have NO idea what I'm doing! CONGRATULATIONS!!!"
   }
 ];
 
+// Varied thinking lines (Zorgblax "processing" the answer)
+const THINKING_LINES = [
+  "Hmmmm... processing through my VERY ADVANCED brain...",
+  "Let me consult my Earth Manual... *reads book upside down*",
+  "My 47 brains are computing... carry the one...",
+  "INTERESTING. Running answer through the Zorputer 3000...",
+  "Checking my notes... *shuffles papers that are clearly blank*",
+  "One moment... *pretends to call someone on space phone* ...yes? ...uh huh... thank you.",
+  "Analyzing... I am DEFINITELY not just guessing...",
+  "Cross-referencing with the Galactic Encyclopedia of Earth Nonsense...",
+  "Hold on, my answer tentacle is tingling... that's either good or I'm having a stroke...",
+  "Let me ask the audience-- NO WAIT, they don't know either. Nobody knows. I'm winging it."
+];
+
+// Audience heckles between questions
+const AUDIENCE_HECKLES = [
+  "I BET 3 GLORBONS ON THE HUMAN!",
+  "THAT'S NOT EVEN A REAL WORD!",
+  "MY SPAWN-LARVAE COULD ANSWER THAT!",
+  "ZORGBLAX DOESN'T KNOW ANYTHING!",
+  "IS EARTH EVEN A REAL PLANET?!",
+  "I CAME HERE FOR THE FREE SNACKS!",
+  "THE HUMAN SMELLS LIKE CALCIUM!",
+  "BRING BACK THE BLOB FROM LAST WEEK!",
+  "BOOOOOO! ...wait, which one am I booing?",
+  "I LEFT MY HOME NEBULA FOR THIS?!",
+  "DOES THE HUMAN DO TRICKS?!",
+  "THIS IS RIGGED! ...right? IS IT?!"
+];
+
+// Zorgblax's suspicion lines (escalating through the game)
+const SUSPICION_LINES = [
+  null, // Q1: no suspicion yet
+  null, // Q2: still chill
+  "Wait... you seem to know a LOT about your own planet. Suspicious...",
+  null, // Q4: lets it go
+  "Hmm... you're getting these awfully fast. Are you ACTUALLY from Earth?!",
+  null, // Q6
+  "HOLD ON. Are you cheating?! *checks under your chair* ...I don't know what I expected to find.",
+  null, // Q8
+  "I've got my EYE STALKS on you, human. SEVEN of them. You can't fool ALL seven.",
+  null  // Q10: too excited about the finale
+];
+
 const PRIZES = [
-  "100 Zorpbucks", "500 Zorpbucks", "1,000 Zorpbucks",
-  "5,000 Zorpbucks", "10,000 Zorpbucks", "50,000 Zorpbucks",
-  "100,000 Zorpbucks", "500,000 Zorpbucks", "1 MILLION Zorpbucks",
-  "1 BLORGINAIRE (??? Zorpbucks)"
+  "100 Zorpbucks",
+  "500 Zorpbucks + a USED SOCK",
+  "1,000 Zorpbucks",
+  "5,000 Zorpbucks + a SLIGHTLY HAUNTED MOON",
+  "10,000 Zorpbucks",
+  "50,000 Zorpbucks + NAMING RIGHTS TO A COMET",
+  "100,000 Zorpbucks",
+  "500,000 Zorpbucks + a CERTIFICATE SAYING YOU'RE OKAY",
+  "1 MILLION Zorpbucks + EARTH'S PARKING SPOT IN THE GALAXY",
+  "1 BLORGINAIRE (a number so big we had to invent it)"
 ];
 
 // ===== GAME STATE =====
 let currentQuestion = 0;
+
+// Show audience bubble briefly
+function showAudienceBubble(text) {
+  const bubble = document.getElementById('audience-bubble');
+  bubble.textContent = text;
+  bubble.style.left = (60 + Math.random() * 300) + 'px';
+  bubble.classList.add('visible');
+  setTimeout(() => bubble.classList.remove('visible'), 2500);
+}
 
 async function startGame() {
   showScene('game-screen');
@@ -606,13 +824,16 @@ async function startGame() {
 
   // Intro dialog
   await showDialog("ZORGBLAX", "WELCOME, DISGUSTING LITTLE EARTH CREATURE!");
-  await sleep(1500);
+  await waitForAdvance();
   await showDialog("ZORGBLAX", "You have been chosen to compete on the galaxy's #1 game show!");
-  await sleep(1500);
+  await waitForAdvance();
+  showAudienceBubble("WOOOOO! FRESH MEAT!");
   await showDialog("ZORGBLAX", "Answer my BRILLIANT questions about your dumb planet and win ZORPBUCKS!");
-  await sleep(1500);
-  await showDialog("ZORGBLAX", "Don't worry... I DEFINITELY know all the right answers. Probably. Let's GO!");
-  await sleep(1200);
+  await waitForAdvance();
+  await showDialog("ZORGBLAX", "Don't worry... I DEFINITELY know all the right answers.");
+  await waitForAdvance();
+  await showDialog("ZORGBLAX", "I studied your planet for ALMOST fifteen minutes. Let's GO!");
+  await waitForAdvance();
 
   askQuestion();
 }
@@ -629,8 +850,10 @@ function showDialog(speaker, text) {
   const speakerEl = document.getElementById('dialog-speaker');
   const textEl = document.getElementById('dialog-text');
   const choices = document.getElementById('choices');
+  const prompt = document.querySelector('.continue-prompt');
   choices.style.display = 'none';
   box.style.display = 'block';
+  if (prompt) prompt.style.display = 'none';
   speakerEl.textContent = speaker + ':';
   return typeText(textEl, text);
 }
@@ -638,8 +861,27 @@ function showDialog(speaker, text) {
 async function askQuestion() {
   updateHUD();
   const q = QUESTIONS[currentQuestion];
+
+  // Occasional audience heckle before question
+  if (currentQuestion > 0 && Math.random() > 0.4) {
+    const heckle = AUDIENCE_HECKLES[Math.floor(Math.random() * AUDIENCE_HECKLES.length)];
+    showAudienceBubble(heckle);
+  }
+
+  // Suspicion line (running gag)
+  const suspicion = SUSPICION_LINES[currentQuestion];
+  if (suspicion) {
+    document.getElementById('alien-sprite').textContent = '🤨';
+    await showDialog("ZORGBLAX", suspicion);
+    await waitForAdvance();
+    document.getElementById('alien-sprite').textContent = '👾';
+  }
+
+  // Ask the question
+  await showDialog("ZORGBLAX", "For " + PRIZES[currentQuestion] + "...");
+  await waitForAdvance();
   await showDialog("ZORGBLAX", q.q);
-  await sleep(600);
+  await waitForAdvance();
 
   // Show choices
   const box = document.getElementById('dialog-box');
@@ -661,24 +903,44 @@ async function askQuestion() {
 async function selectAnswer(index) {
   sfxSelect();
   const choicesEl = document.getElementById('choices');
+
+  // Flash the selected answer
+  const btns = choicesEl.querySelectorAll('.choice-btn');
+  btns.forEach((b, i) => {
+    if (i === index) {
+      b.style.background = '#ffec27';
+      b.style.color = '#000';
+      b.style.borderColor = '#fff';
+    } else {
+      b.style.opacity = '0.3';
+    }
+    b.onclick = null; // disable all buttons
+  });
+  await sleep(800);
   choicesEl.style.display = 'none';
 
   const q = QUESTIONS[currentQuestion];
 
-  // Brief "thinking" moment
-  await showDialog("ZORGBLAX", "Hmmmm... processing your answer through my VERY ADVANCED brain...");
-  await sleep(1500);
+  // Varied thinking line
+  const thinkLine = THINKING_LINES[currentQuestion % THINKING_LINES.length];
+  document.getElementById('alien-sprite').textContent = '🤔';
+  await showDialog("ZORGBLAX", thinkLine);
+  await sleep(1800);
 
   // Always "correct"
   sfxCorrect();
   document.getElementById('alien-sprite').textContent = '🥳';
   await showDialog("ZORGBLAX", "CORRECT!!! (I think?!) You win " + PRIZES[currentQuestion] + "!");
-  await sleep(1500);
+  showAudienceBubble(Math.random() > 0.5 ? "WOOOOOOO!!" : "HOW?! IMPOSSIBLE!");
+  await waitForAdvance();
+
+  // Answer-specific reaction
+  document.getElementById('alien-sprite').textContent = '😱';
+  const reaction = q.reactions[index];
+  await showDialog("ZORGBLAX", reaction);
+  await waitForAdvance();
 
   document.getElementById('alien-sprite').textContent = '👾';
-  await showDialog("ZORGBLAX", q.reaction);
-  await sleep(2000);
-
   currentQuestion++;
   if (currentQuestion >= QUESTIONS.length) {
     startDanceParty();
@@ -754,16 +1016,7 @@ document.getElementById('title-screen').addEventListener('click', () => {
   playWormhole();
 });
 
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter' || e.key === ' ') {
-    const title = document.getElementById('title-screen');
-    if (title.classList.contains('active')) {
-      ensureAudio();
-      sfxSelect();
-      playWormhole();
-    }
-  }
-});
+// Title screen keyboard handler is merged into the main keydown listener above
 
 document.getElementById('play-again-btn').addEventListener('click', () => {
   location.reload();
