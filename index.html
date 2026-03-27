@@ -1,0 +1,773 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Who Wants to Zorp A Blorginaire?</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    overflow: hidden;
+    font-family: 'Press Start 2P', monospace;
+    image-rendering: pixelated;
+  }
+
+  #screen {
+    width: 512px;
+    height: 480px;
+    background: #000;
+    position: relative;
+    overflow: hidden;
+    border: 4px solid #444;
+    box-shadow: 0 0 40px rgba(0,255,100,0.15);
+  }
+
+  /* Scanline overlay */
+  #screen::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      rgba(0,0,0,0.15) 0px,
+      rgba(0,0,0,0.15) 1px,
+      transparent 1px,
+      transparent 2px
+    );
+    pointer-events: none;
+    z-index: 999;
+  }
+
+  .scene { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+  .scene.active { display: block; }
+
+  /* ===== TITLE SCREEN ===== */
+  #title-screen {
+    background: #000;
+    text-align: center;
+  }
+  #title-screen .stars {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  }
+  #title-screen h1 {
+    color: #5eff3e;
+    font-size: 11px;
+    margin-top: 80px;
+    line-height: 2.2;
+    text-shadow: 2px 2px #005500;
+    position: relative;
+    z-index: 2;
+  }
+  #title-screen h1 .big {
+    font-size: 18px;
+    color: #ffec27;
+    display: block;
+    margin: 12px 0;
+    text-shadow: 2px 2px #886600;
+  }
+  #title-screen .press-start {
+    color: #fff;
+    font-size: 10px;
+    margin-top: 80px;
+    animation: blink 1s infinite;
+    position: relative;
+    z-index: 2;
+  }
+  @keyframes blink { 0%,49%{opacity:1} 50%,100%{opacity:0} }
+
+  #title-screen .alien-title {
+    font-size: 60px;
+    display: block;
+    margin: 20px 0;
+    position: relative;
+    z-index: 2;
+  }
+
+  /* ===== WORMHOLE SEQUENCE ===== */
+  #wormhole-screen {
+    background: #000;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  .wormhole-ring {
+    position: absolute;
+    border: 3px solid;
+    border-radius: 50%;
+    animation: wormhole-spin 2s linear infinite;
+  }
+  @keyframes wormhole-spin {
+    0% { transform: rotate(0deg) scale(1); opacity: 1; }
+    100% { transform: rotate(360deg) scale(0); opacity: 0; }
+  }
+  #wormhole-text {
+    position: relative;
+    z-index: 10;
+    color: #fff;
+    font-size: 8px;
+    text-align: center;
+    line-height: 2.5;
+    opacity: 0;
+    transition: opacity 0.5s;
+  }
+  #wormhole-text.visible { opacity: 1; }
+
+  /* ===== STAGE / GAME SCREEN ===== */
+  #game-screen {
+    background: linear-gradient(180deg, #1a0033 0%, #2d004d 40%, #1a0033 100%);
+  }
+  .stage-lights {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 60px;
+    display: flex;
+    justify-content: space-around;
+    padding: 8px;
+  }
+  .stage-light {
+    width: 12px; height: 12px;
+    border-radius: 50%;
+    animation: light-flash 0.8s infinite alternate;
+  }
+  @keyframes light-flash { 0%{opacity:0.3} 100%{opacity:1} }
+
+  .audience {
+    position: absolute;
+    bottom: 0; left: 0; width: 100%;
+    height: 50px;
+    display: flex;
+    justify-content: center;
+    gap: 2px;
+    flex-wrap: wrap;
+    overflow: hidden;
+  }
+  .audience-member {
+    width: 14px; height: 18px;
+    border-radius: 50% 50% 0 0;
+    margin-top: auto;
+  }
+
+  /* Alien host */
+  .alien-host {
+    position: absolute;
+    top: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    text-align: center;
+    z-index: 5;
+  }
+  .alien-sprite {
+    font-size: 48px;
+    animation: alien-bob 1s ease-in-out infinite alternate;
+  }
+  @keyframes alien-bob {
+    0% { transform: translateY(0); }
+    100% { transform: translateY(-5px); }
+  }
+  .alien-name {
+    color: #5eff3e;
+    font-size: 7px;
+    margin-top: 2px;
+  }
+
+  /* Dialog box */
+  .dialog-box {
+    position: absolute;
+    bottom: 55px;
+    left: 16px;
+    right: 16px;
+    background: #111;
+    border: 3px solid #5eff3e;
+    padding: 12px;
+    color: #fff;
+    font-size: 8px;
+    line-height: 2;
+    min-height: 60px;
+    z-index: 10;
+  }
+  .dialog-box .speaker {
+    color: #5eff3e;
+    margin-bottom: 4px;
+  }
+
+  /* Answer choices */
+  .choices {
+    position: absolute;
+    bottom: 55px;
+    left: 16px;
+    right: 16px;
+    z-index: 10;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+  }
+  .choice-btn {
+    background: #1a0044;
+    border: 2px solid #7744aa;
+    color: #fff;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 7px;
+    padding: 10px 8px;
+    cursor: pointer;
+    text-align: left;
+    line-height: 1.8;
+    transition: background 0.1s, border-color 0.1s;
+  }
+  .choice-btn:hover {
+    background: #330066;
+    border-color: #ffec27;
+    color: #ffec27;
+  }
+  .choice-btn .choice-label {
+    color: #ffec27;
+  }
+
+  /* Question counter / prize ladder */
+  .hud {
+    position: absolute;
+    top: 4px;
+    right: 8px;
+    color: #ffec27;
+    font-size: 7px;
+    z-index: 10;
+    text-align: right;
+    line-height: 2;
+  }
+  .hud .prize {
+    color: #5eff3e;
+  }
+
+  .hud-left {
+    position: absolute;
+    top: 4px;
+    left: 8px;
+    color: #ff6ee6;
+    font-size: 7px;
+    z-index: 10;
+    line-height: 2;
+  }
+
+  /* ===== DANCE PARTY ===== */
+  #dance-screen {
+    text-align: center;
+    overflow: hidden;
+  }
+  .dance-floor {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    display: flex;
+    flex-wrap: wrap;
+  }
+  .dance-tile {
+    width: 64px; height: 60px;
+    animation: tile-flash 0.5s infinite alternate;
+  }
+  @keyframes tile-flash {
+    0% { opacity: 0.6; } 100% { opacity: 1; }
+  }
+  .dance-text {
+    position: absolute;
+    top: 40px;
+    width: 100%;
+    color: #ffec27;
+    font-size: 12px;
+    z-index: 20;
+    text-shadow: 2px 2px #880000;
+    animation: dance-bounce 0.4s infinite alternate;
+    line-height: 2.5;
+  }
+  @keyframes dance-bounce {
+    0% { transform: translateY(0) scale(1); }
+    100% { transform: translateY(-8px) scale(1.05); }
+  }
+  .dancer {
+    position: absolute;
+    font-size: 36px;
+    z-index: 15;
+    animation: dancer-move 0.5s infinite alternate;
+  }
+  @keyframes dancer-move {
+    0% { transform: translateY(0) rotate(-5deg); }
+    100% { transform: translateY(-10px) rotate(5deg); }
+  }
+
+  .credits {
+    position: absolute;
+    bottom: 20px;
+    width: 100%;
+    color: #aaa;
+    font-size: 7px;
+    line-height: 2.5;
+    z-index: 20;
+    animation: credits-scroll 8s linear infinite;
+  }
+  @keyframes credits-scroll {
+    0% { transform: translateY(100%); }
+    100% { transform: translateY(-200%); }
+  }
+
+  .play-again-btn {
+    position: absolute;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1a0044;
+    border: 3px solid #5eff3e;
+    color: #5eff3e;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 9px;
+    padding: 12px 24px;
+    cursor: pointer;
+    z-index: 30;
+    animation: blink 1s infinite;
+  }
+  .play-again-btn:hover {
+    background: #330066;
+    color: #ffec27;
+    border-color: #ffec27;
+  }
+</style>
+</head>
+<body>
+
+<div id="screen">
+
+  <!-- TITLE SCREEN -->
+  <div id="title-screen" class="scene active">
+    <canvas class="stars" id="stars-canvas"></canvas>
+    <h1>
+      WELCOME TO
+      <span class="big">WHO WANTS TO ZORP</span>
+      <span class="big">A BLORGINAIRE?</span>
+    </h1>
+    <div class="alien-title">&#x1F47E;</div>
+    <div class="press-start">&#x25B6; PRESS START &#x25C0;</div>
+  </div>
+
+  <!-- WORMHOLE SEQUENCE -->
+  <div id="wormhole-screen" class="scene">
+    <div id="wormhole-container"></div>
+    <div id="wormhole-text"></div>
+  </div>
+
+  <!-- GAME SCREEN -->
+  <div id="game-screen" class="scene">
+    <div class="stage-lights" id="stage-lights"></div>
+    <div class="hud-left" id="hud-left"></div>
+    <div class="hud" id="hud"></div>
+    <div class="alien-host">
+      <div class="alien-sprite" id="alien-sprite">&#x1F47E;</div>
+      <div class="alien-name">ZORGBLAX THE MAGNIFICENT</div>
+    </div>
+    <div class="dialog-box" id="dialog-box" style="display:none;">
+      <div class="speaker" id="dialog-speaker"></div>
+      <div id="dialog-text"></div>
+    </div>
+    <div class="choices" id="choices" style="display:none;"></div>
+    <div class="audience" id="audience"></div>
+  </div>
+
+  <!-- DANCE PARTY -->
+  <div id="dance-screen" class="scene">
+    <div class="dance-floor" id="dance-floor"></div>
+    <div class="dance-text" id="dance-text"></div>
+    <div id="dancers"></div>
+    <div class="credits" id="credits"></div>
+    <button class="play-again-btn" id="play-again-btn" style="display:none;">PLAY AGAIN</button>
+  </div>
+
+</div>
+
+<script>
+// ===== AUDIO ENGINE =====
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let audioCtx;
+function ensureAudio() {
+  if (!audioCtx) audioCtx = new AudioCtx();
+}
+
+function playTone(freq, duration, type = 'square', volume = 0.08) {
+  ensureAudio();
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = type;
+  osc.frequency.value = freq;
+  gain.gain.value = volume;
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.start();
+  osc.stop(audioCtx.currentTime + duration);
+}
+
+function sfxType() { [200,300,400,500].forEach((f,i) => setTimeout(() => playTone(f, 0.08), i * 60)); }
+function sfxSelect() { playTone(600, 0.06); playTone(800, 0.06); setTimeout(() => playTone(1000, 0.1), 80); }
+function sfxWarp() {
+  for (let i = 0; i < 20; i++) setTimeout(() => playTone(200 + i * 80, 0.12, 'sawtooth', 0.04), i * 50);
+}
+function sfxCorrect() {
+  [523, 659, 784, 1047].forEach((f, i) => setTimeout(() => playTone(f, 0.15), i * 100));
+}
+function sfxDance() {
+  const notes = [262, 330, 392, 523, 392, 330, 262, 330, 392, 523, 659, 784];
+  notes.forEach((f, i) => setTimeout(() => playTone(f, 0.12, 'square', 0.06), i * 150));
+  setTimeout(sfxDance, notes.length * 150);
+}
+
+// ===== STARFIELD =====
+function initStars() {
+  const canvas = document.getElementById('stars-canvas');
+  const ctx = canvas.getContext('2d');
+  canvas.width = 512;
+  canvas.height = 480;
+  const stars = Array.from({ length: 80 }, () => ({
+    x: Math.random() * 512, y: Math.random() * 480,
+    s: Math.random() * 2 + 1, speed: Math.random() * 0.5 + 0.2
+  }));
+  function draw() {
+    ctx.fillStyle = '#000';
+    ctx.fillRect(0, 0, 512, 480);
+    stars.forEach(s => {
+      ctx.fillStyle = `hsl(${Math.random() * 60 + 100}, 80%, ${60 + Math.random() * 40}%)`;
+      ctx.fillRect(s.x, s.y, s.s, s.s);
+      s.y += s.speed;
+      if (s.y > 480) { s.y = 0; s.x = Math.random() * 512; }
+    });
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+// ===== SCENE MANAGEMENT =====
+function showScene(id) {
+  document.querySelectorAll('.scene').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+// ===== TYPEWRITER =====
+function typeText(el, text, speed = 35) {
+  return new Promise(resolve => {
+    el.textContent = '';
+    let i = 0;
+    const interval = setInterval(() => {
+      el.textContent += text[i];
+      if (i % 2 === 0) playTone(440 + Math.random() * 100, 0.03, 'square', 0.03);
+      i++;
+      if (i >= text.length) { clearInterval(interval); resolve(); }
+    }, speed);
+  });
+}
+
+// ===== WORMHOLE SEQUENCE =====
+async function playWormhole() {
+  showScene('wormhole-screen');
+  sfxWarp();
+  const container = document.getElementById('wormhole-container');
+  const colors = ['#5eff3e', '#ffec27', '#ff6ee6', '#29adff', '#ff004d'];
+  for (let i = 0; i < 12; i++) {
+    const ring = document.createElement('div');
+    ring.className = 'wormhole-ring';
+    const size = 300 - i * 20;
+    ring.style.width = size + 'px';
+    ring.style.height = size + 'px';
+    ring.style.borderColor = colors[i % colors.length];
+    ring.style.left = (256 - size / 2) + 'px';
+    ring.style.top = (240 - size / 2) + 'px';
+    ring.style.animationDelay = (i * 0.15) + 's';
+    container.appendChild(ring);
+  }
+
+  const textEl = document.getElementById('wormhole-text');
+  const lines = [
+    "You were just eating cereal...",
+    "When suddenly a beam of light\nhit your living room!",
+    "ZZZZAAAAAPPPP!!!",
+    "You've been teleported across\n47 dimensions!",
+    "You land on... a stage??"
+  ];
+  for (const line of lines) {
+    textEl.textContent = '';
+    textEl.classList.add('visible');
+    await typeText(textEl, line, 40);
+    await sleep(1200);
+  }
+  await sleep(500);
+  container.innerHTML = '';
+  startGame();
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ===== STAGE SETUP =====
+function buildStage() {
+  // Lights
+  const lightsEl = document.getElementById('stage-lights');
+  lightsEl.innerHTML = '';
+  const lightColors = ['#ff004d','#ffec27','#5eff3e','#29adff','#ff6ee6','#ff004d','#ffec27','#5eff3e'];
+  lightColors.forEach((c, i) => {
+    const l = document.createElement('div');
+    l.className = 'stage-light';
+    l.style.background = c;
+    l.style.animationDelay = (i * 0.15) + 's';
+    lightsEl.appendChild(l);
+  });
+
+  // Audience
+  const audEl = document.getElementById('audience');
+  audEl.innerHTML = '';
+  const alienEmojis = ['👽','👾','🛸','🤖','👹','🐙','🦑','🪼'];
+  for (let i = 0; i < 30; i++) {
+    const m = document.createElement('div');
+    m.className = 'audience-member';
+    m.style.fontSize = '14px';
+    m.textContent = alienEmojis[i % alienEmojis.length];
+    m.style.animationDelay = (Math.random() * 2) + 's';
+    audEl.appendChild(m);
+  }
+}
+
+// ===== QUESTIONS =====
+const QUESTIONS = [
+  {
+    q: "Human greeting ritual: What is a 'handshake'?",
+    a: ["Two humans linking tentacles","A seizure of the upper limb","Checking each other for weapons","A mating display involving palms"],
+    reaction: "Fascinating!! On my planet we greet by spitting acid. Much more efficient!"
+  },
+  {
+    q: "Why do humans stare at small glowing rectangles for 8 hours daily?",
+    a: ["Recharging their life force","Worshipping their silicon overlords","They forgot how to look up","The rectangles contain tiny prisoners they must watch"],
+    reaction: "I KNEW IT! The rectangles are in charge!! I must warn the Galactic Council!"
+  },
+  {
+    q: "What is the human food known as 'pizza'?",
+    a: ["A circular debt arrangement","Flattened wheat with old milk on top","A peace treaty you eat","An edible flying saucer prototype"],
+    reaction: "You EAT your flying saucers?! No wonder you haven't achieved light speed!"
+  },
+  {
+    q: "Why do humans voluntarily enter a 'gym'?",
+    a: ["Punishment for eating too much pizza","To practice lifting things and putting them down","A cult that worships mirrors","They enjoy suffering in spandex"],
+    reaction: "LIFTING THINGS AND PUTTING THEM BACK?! Your species is magnificently pointless!"
+  },
+  {
+    q: "What is a 'cat' and why does it control the household?",
+    a: ["A tiny furry dictator","Earth's true dominant species","A loaf of bread that judges you","A government surveillance device that purrs"],
+    reaction: "So cats ARE the real leaders! I should have been negotiating with THEM this whole time!"
+  },
+  {
+    q: "Explain the human ritual known as 'Monday'.",
+    a: ["A weekly punishment from the sun god","The day humans collectively pretend to work","When Earth's rotation feels 47% slower","A shared hallucination of misery"],
+    reaction: "On my planet EVERY day is Monday. That explains why we conquered 12 galaxies out of sheer rage!"
+  },
+  {
+    q: "What happens during a human 'traffic jam'?",
+    a: ["Thousands sit in metal boxes screaming","A failed attempt at group meditation","Humans practice patience (badly)","Cars form a hive mind that decides to stop"],
+    reaction: "YOU JUST SIT THERE?! Why not activate your car's warp drive?! Oh... oh no. You DON'T HAVE THOSE?!"
+  },
+  {
+    q: "Why do humans expel air from their nose holes when amused?",
+    a: ["Laughter is a factory reset","Their humor gland overflows","It prevents their head from exploding","Nobody knows. Not even humans."],
+    reaction: "HEAD EXPLOSION PREVENTION!! I have been dangerously close! *nervous alien laughter*"
+  },
+  {
+    q: "What is 'sleeping' and why do humans do it EVERY SINGLE DAY?",
+    a: ["A nightly death rehearsal","Humans are solar powered with bad batteries","Their brains need to defragment","Practicing being furniture"],
+    reaction: "YOU SHUT DOWN FOR 8 HOURS?! You're basically OFF for a third of your life!! MY SPECIES WILL NOTE THIS VULNERABILITY... I mean... how cute!"
+  },
+  {
+    q: "FINAL QUESTION: What is the meaning of human existence?",
+    a: ["42","To make memes and eat snacks","Nobody knows but they're very loud about it","To boldly argue about pineapple on pizza"],
+    reaction: "ALL ANSWERS ARE CORRECT!! Honestly I wrote these questions 10 minutes ago in the space-bathroom. I have NO idea what I'm doing! CONGRATULATIONS!!!"
+  }
+];
+
+const PRIZES = [
+  "100 Zorpbucks", "500 Zorpbucks", "1,000 Zorpbucks",
+  "5,000 Zorpbucks", "10,000 Zorpbucks", "50,000 Zorpbucks",
+  "100,000 Zorpbucks", "500,000 Zorpbucks", "1 MILLION Zorpbucks",
+  "1 BLORGINAIRE (??? Zorpbucks)"
+];
+
+// ===== GAME STATE =====
+let currentQuestion = 0;
+
+async function startGame() {
+  showScene('game-screen');
+  buildStage();
+  currentQuestion = 0;
+  updateHUD();
+
+  // Intro dialog
+  await showDialog("ZORGBLAX", "WELCOME, DISGUSTING LITTLE EARTH CREATURE!");
+  await sleep(1500);
+  await showDialog("ZORGBLAX", "You have been chosen to compete on the galaxy's #1 game show!");
+  await sleep(1500);
+  await showDialog("ZORGBLAX", "Answer my BRILLIANT questions about your dumb planet and win ZORPBUCKS!");
+  await sleep(1500);
+  await showDialog("ZORGBLAX", "Don't worry... I DEFINITELY know all the right answers. Probably. Let's GO!");
+  await sleep(1200);
+
+  askQuestion();
+}
+
+function updateHUD() {
+  document.getElementById('hud').innerHTML =
+    `Q: ${currentQuestion + 1}/10<br><span class="prize">&#x1F4B0; ${PRIZES[currentQuestion]}</span>`;
+  document.getElementById('hud-left').innerHTML =
+    currentQuestion > 0 ? `WON: ${PRIZES[currentQuestion - 1]}` : 'WON: Nothing yet!';
+}
+
+function showDialog(speaker, text) {
+  const box = document.getElementById('dialog-box');
+  const speakerEl = document.getElementById('dialog-speaker');
+  const textEl = document.getElementById('dialog-text');
+  const choices = document.getElementById('choices');
+  choices.style.display = 'none';
+  box.style.display = 'block';
+  speakerEl.textContent = speaker + ':';
+  return typeText(textEl, text);
+}
+
+async function askQuestion() {
+  updateHUD();
+  const q = QUESTIONS[currentQuestion];
+  await showDialog("ZORGBLAX", q.q);
+  await sleep(600);
+
+  // Show choices
+  const box = document.getElementById('dialog-box');
+  box.style.display = 'none';
+  const choicesEl = document.getElementById('choices');
+  choicesEl.style.display = 'grid';
+  choicesEl.innerHTML = '';
+
+  const labels = ['A', 'B', 'C', 'D'];
+  q.a.forEach((answer, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'choice-btn';
+    btn.innerHTML = `<span class="choice-label">${labels[i]}:</span> ${answer}`;
+    btn.onclick = () => selectAnswer(i);
+    choicesEl.appendChild(btn);
+  });
+}
+
+async function selectAnswer(index) {
+  sfxSelect();
+  const choicesEl = document.getElementById('choices');
+  choicesEl.style.display = 'none';
+
+  const q = QUESTIONS[currentQuestion];
+
+  // Brief "thinking" moment
+  await showDialog("ZORGBLAX", "Hmmmm... processing your answer through my VERY ADVANCED brain...");
+  await sleep(1500);
+
+  // Always "correct"
+  sfxCorrect();
+  document.getElementById('alien-sprite').textContent = '🥳';
+  await showDialog("ZORGBLAX", "CORRECT!!! (I think?!) You win " + PRIZES[currentQuestion] + "!");
+  await sleep(1500);
+
+  document.getElementById('alien-sprite').textContent = '👾';
+  await showDialog("ZORGBLAX", q.reaction);
+  await sleep(2000);
+
+  currentQuestion++;
+  if (currentQuestion >= QUESTIONS.length) {
+    startDanceParty();
+  } else {
+    askQuestion();
+  }
+}
+
+// ===== DANCE PARTY =====
+function startDanceParty() {
+  showScene('dance-screen');
+  sfxDance();
+
+  // Build dance floor
+  const floor = document.getElementById('dance-floor');
+  floor.innerHTML = '';
+  const colors = ['#ff004d','#ffec27','#5eff3e','#29adff','#ff6ee6','#ff77a8','#ffa300','#7e2553'];
+  for (let i = 0; i < 64; i++) {
+    const tile = document.createElement('div');
+    tile.className = 'dance-tile';
+    tile.style.background = colors[Math.floor(Math.random() * colors.length)];
+    tile.style.animationDelay = (Math.random() * 0.5) + 's';
+    floor.appendChild(tile);
+  }
+
+  // Randomize tiles continuously
+  setInterval(() => {
+    floor.querySelectorAll('.dance-tile').forEach(t => {
+      t.style.background = colors[Math.floor(Math.random() * colors.length)];
+    });
+  }, 500);
+
+  // Dance text
+  document.getElementById('dance-text').innerHTML =
+    "&#x1F389; YOU ARE A BLORGINAIRE! &#x1F389;<br>&#x1F47E; DANCE PARTY!! &#x1F47E;";
+
+  // Dancers
+  const dancersEl = document.getElementById('dancers');
+  dancersEl.innerHTML = '';
+  const dancerEmojis = ['👾','👽','🛸','🤖','🕺','💃','🐙','🪩','🦑','🎷','🎸','🥁'];
+  dancerEmojis.forEach((emoji, i) => {
+    const d = document.createElement('div');
+    d.className = 'dancer';
+    d.textContent = emoji;
+    d.style.left = (30 + (i % 6) * 78) + 'px';
+    d.style.top = (160 + Math.floor(i / 6) * 100) + 'px';
+    d.style.animationDelay = (i * 0.12) + 's';
+    dancersEl.appendChild(d);
+  });
+
+  // Credits
+  document.getElementById('credits').innerHTML =
+    "CREATED BY ZORGBLAX PRODUCTIONS<br><br>" +
+    "HOST: ZORGBLAX THE MAGNIFICENT<br><br>" +
+    "CONTESTANT: YOU (Earth Creature #7,832,491,002)<br><br>" +
+    "CATERING: BLORP'S SPACE DINER<br><br>" +
+    "ZORPBUCKS HAVE NO VALUE IN ANY KNOWN DIMENSION<br><br>" +
+    "NO HUMANS WERE HARMED (probably)<br><br>" +
+    "&#x1F47E; THANKS FOR PLAYING! &#x1F47E;";
+
+  // Play again button
+  setTimeout(() => {
+    document.getElementById('play-again-btn').style.display = 'block';
+  }, 3000);
+}
+
+// ===== INIT =====
+initStars();
+
+document.getElementById('title-screen').addEventListener('click', () => {
+  ensureAudio();
+  sfxSelect();
+  playWormhole();
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' || e.key === ' ') {
+    const title = document.getElementById('title-screen');
+    if (title.classList.contains('active')) {
+      ensureAudio();
+      sfxSelect();
+      playWormhole();
+    }
+  }
+});
+
+document.getElementById('play-again-btn').addEventListener('click', () => {
+  location.reload();
+});
+</script>
+</body>
+</html>
