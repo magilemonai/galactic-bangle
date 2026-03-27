@@ -158,19 +158,24 @@
   /* Alien host */
   .alien-host {
     position: absolute;
-    top: 30px;
+    top: 18px;
     left: 50%;
     transform: translateX(-50%);
     text-align: center;
     z-index: 5;
   }
-  .alien-sprite {
-    font-size: 48px;
+  #alien-canvas {
+    image-rendering: pixelated;
     animation: alien-bob 1s ease-in-out infinite alternate;
   }
   @keyframes alien-bob {
     0% { transform: translateY(0); }
     100% { transform: translateY(-5px); }
+  }
+  @keyframes alien-jump {
+    0% { transform: translateY(0); }
+    50% { transform: translateY(-20px) scale(1.1); }
+    100% { transform: translateY(0); }
   }
   .alien-name {
     color: #5eff3e;
@@ -453,7 +458,7 @@
     <div class="hud-left" id="hud-left"></div>
     <div class="prize-ladder" id="prize-ladder"></div>
     <div class="alien-host">
-      <div class="alien-sprite" id="alien-sprite">&#x1F47E;</div>
+      <canvas id="alien-canvas" width="64" height="80" style="width:128px;height:160px;"></canvas>
       <div class="alien-name">ZORGBLAX THE MAGNIFICENT</div>
     </div>
     <div class="dialog-box" id="dialog-box" style="display:none;">
@@ -512,6 +517,167 @@ function sfxDance() {
   notes.forEach((f, i) => setTimeout(() => playTone(f, 0.12, 'square', 0.06), i * 150));
   setTimeout(sfxDance, notes.length * 150);
 }
+
+// ===== PIXEL ART ALIEN HOST =====
+const alienCanvas = document.getElementById('alien-canvas');
+const alienCtx = alienCanvas ? alienCanvas.getContext('2d') : null;
+
+// Draw a pixel at scale (each "pixel" = 4x4 real pixels on the 64x80 canvas)
+const PX = 4;
+function apx(x, y, color) {
+  if (!alienCtx) return;
+  alienCtx.fillStyle = color;
+  alienCtx.fillRect(x * PX, y * PX, PX, PX);
+}
+
+// Color palette
+const AC = {
+  skin: '#5eff3e',
+  skinDark: '#29a81e',
+  skinLight: '#9fff8e',
+  eye: '#fff',
+  pupil: '#111',
+  pupilAlt: '#ff004d',
+  mouth: '#1a0033',
+  teeth: '#ffec27',
+  antenna: '#29adff',
+  antennaGlow: '#fff',
+  suit: '#7e2553',
+  suitLight: '#a8437a',
+  podium: '#2d004d',
+  podiumLight: '#4d0080',
+  podiumTrim: '#ffec27',
+};
+
+function drawAlien(expression = 'neutral') {
+  if (!alienCtx) return;
+  alienCtx.clearRect(0, 0, 64, 80);
+
+  // Antenna stalks
+  apx(6, 0, AC.antenna); apx(9, 0, AC.antenna);
+  apx(6, 1, AC.antenna); apx(9, 1, AC.antenna);
+  apx(6, 2, AC.antenna); apx(9, 2, AC.antenna);
+
+  // Antenna tips (glow)
+  const glowFrame = Math.floor(Date.now() / 300) % 2;
+  const glowColor = glowFrame ? AC.antennaGlow : AC.antenna;
+  apx(5, 0, glowColor); apx(10, 0, glowColor);
+
+  // Head (rows 3-9, cols 3-12)
+  for (let y = 3; y <= 9; y++) {
+    for (let x = 3; x <= 12; x++) {
+      if (y === 3 && (x === 3 || x === 12)) continue; // rounded corners
+      if (y === 9 && (x === 3 || x === 12)) continue;
+      apx(x, y, AC.skin);
+    }
+  }
+  // Head highlights
+  apx(4, 4, AC.skinLight); apx(5, 3, AC.skinLight);
+
+  // Eyes (change based on expression)
+  const eyeL = { x: 5, y: 5 };
+  const eyeR = { x: 9, y: 5 };
+
+  if (expression === 'neutral' || expression === 'thinking') {
+    // Normal eyes - white with dark pupil
+    apx(eyeL.x, eyeL.y, AC.eye); apx(eyeL.x + 1, eyeL.y, AC.eye);
+    apx(eyeR.x, eyeR.y, AC.eye); apx(eyeR.x + 1, eyeR.y, AC.eye);
+    apx(eyeL.x + 1, eyeL.y, AC.pupil);
+    apx(eyeR.x + 1, eyeR.y, AC.pupil);
+    if (expression === 'thinking') {
+      // One eye squinted (smaller)
+      apx(eyeR.x, eyeR.y, AC.skin); apx(eyeR.x + 1, eyeR.y, AC.skinDark);
+    }
+  } else if (expression === 'excited' || expression === 'celebrating') {
+    // Big sparkly eyes
+    apx(eyeL.x, eyeL.y, AC.eye); apx(eyeL.x + 1, eyeL.y, AC.eye);
+    apx(eyeL.x, eyeL.y + 1, AC.eye); apx(eyeL.x + 1, eyeL.y + 1, AC.eye);
+    apx(eyeR.x, eyeR.y, AC.eye); apx(eyeR.x + 1, eyeR.y, AC.eye);
+    apx(eyeR.x, eyeR.y + 1, AC.eye); apx(eyeR.x + 1, eyeR.y + 1, AC.eye);
+    // Star pupils
+    apx(eyeL.x, eyeL.y, AC.pupilAlt);
+    apx(eyeR.x + 1, eyeR.y, AC.pupilAlt);
+  } else if (expression === 'shocked') {
+    // Wide eyes
+    apx(eyeL.x, eyeL.y, AC.eye); apx(eyeL.x + 1, eyeL.y, AC.eye);
+    apx(eyeL.x, eyeL.y + 1, AC.eye); apx(eyeL.x + 1, eyeL.y + 1, AC.eye);
+    apx(eyeR.x, eyeR.y, AC.eye); apx(eyeR.x + 1, eyeR.y, AC.eye);
+    apx(eyeR.x, eyeR.y + 1, AC.eye); apx(eyeR.x + 1, eyeR.y + 1, AC.eye);
+    // Tiny pupils
+    apx(eyeL.x + 1, eyeL.y + 1, AC.pupil);
+    apx(eyeR.x, eyeR.y + 1, AC.pupil);
+  } else if (expression === 'suspicious') {
+    // Narrowed eyes
+    apx(eyeL.x, eyeL.y, AC.skinDark); apx(eyeL.x + 1, eyeL.y, AC.eye);
+    apx(eyeR.x, eyeR.y, AC.eye); apx(eyeR.x + 1, eyeR.y, AC.skinDark);
+    apx(eyeL.x + 1, eyeL.y, AC.pupil);
+    apx(eyeR.x, eyeR.y, AC.pupil);
+  }
+
+  // Mouth (changes per expression)
+  if (expression === 'neutral' || expression === 'thinking' || expression === 'suspicious') {
+    apx(6, 8, AC.mouth); apx(7, 8, AC.mouth); apx(8, 8, AC.mouth); apx(9, 8, AC.mouth);
+  } else if (expression === 'excited' || expression === 'celebrating') {
+    // Big open grin
+    apx(5, 8, AC.mouth); apx(6, 8, AC.mouth); apx(7, 8, AC.mouth);
+    apx(8, 8, AC.mouth); apx(9, 8, AC.mouth); apx(10, 8, AC.mouth);
+    apx(6, 7, AC.teeth); apx(7, 7, AC.teeth); apx(8, 7, AC.teeth); apx(9, 7, AC.teeth);
+  } else if (expression === 'shocked') {
+    // O mouth
+    apx(7, 7, AC.mouth); apx(8, 7, AC.mouth);
+    apx(7, 8, AC.mouth); apx(8, 8, AC.mouth);
+  }
+
+  // Body / suit (rows 10-14)
+  for (let y = 10; y <= 14; y++) {
+    for (let x = 4; x <= 11; x++) {
+      if (y === 10 && (x === 4 || x === 11)) continue;
+      apx(x, y, AC.suit);
+    }
+  }
+  // Suit collar
+  apx(6, 10, AC.suitLight); apx(7, 10, AC.suitLight); apx(8, 10, AC.suitLight); apx(9, 10, AC.suitLight);
+  // Suit buttons
+  apx(7, 12, AC.teeth); apx(8, 12, AC.teeth);
+
+  // Arms
+  apx(3, 11, AC.skin); apx(3, 12, AC.skin); apx(2, 12, AC.skin);
+  apx(12, 11, AC.skin); apx(12, 12, AC.skin); apx(13, 12, AC.skin);
+
+  // Celebrating: arms up!
+  if (expression === 'celebrating') {
+    apx(3, 11, AC.skin); apx(2, 10, AC.skin); apx(1, 9, AC.skin);
+    apx(12, 11, AC.skin); apx(13, 10, AC.skin); apx(14, 9, AC.skin);
+  }
+
+  // Podium (rows 15-19)
+  for (let y = 15; y <= 19; y++) {
+    for (let x = 1; x <= 14; x++) {
+      apx(x, y, AC.podium);
+    }
+  }
+  // Podium trim
+  for (let x = 1; x <= 14; x++) apx(x, 15, AC.podiumTrim);
+  // Podium logo (Z)
+  apx(6, 17, AC.podiumLight); apx(7, 17, AC.podiumLight); apx(8, 17, AC.podiumLight); apx(9, 17, AC.podiumLight);
+  apx(8, 18, AC.podiumLight);
+  apx(6, 19, AC.podiumLight); apx(7, 19, AC.podiumLight); apx(8, 19, AC.podiumLight); apx(9, 19, AC.podiumLight);
+}
+
+let alienExpression = 'neutral';
+let alienAnimFrame = 0;
+function setAlienExpression(expr) {
+  alienExpression = expr;
+  drawAlien(expr);
+  // Jump animation for exciting moments
+  if (expr === 'celebrating' || expr === 'excited') {
+    const c = document.getElementById('alien-canvas');
+    if (c) { c.style.animation = 'alien-jump 0.4s ease-out'; setTimeout(() => c.style.animation = 'alien-bob 1s ease-in-out infinite alternate', 400); }
+  }
+}
+
+// Animate antenna glow
+setInterval(() => { if (alienCanvas) drawAlien(alienExpression); }, 300);
 
 // ===== STARFIELD =====
 function initStars() {
@@ -901,6 +1067,7 @@ async function startGame() {
   buildStage();
   currentQuestion = 0;
   updateHUD();
+  setAlienExpression('neutral');
 
   // Intro dialog
   await showDialog("ZORGBLAX", "WELCOME, DISGUSTING LITTLE EARTH CREATURE!");
@@ -961,10 +1128,10 @@ async function askQuestion() {
   // Suspicion line (running gag)
   const suspicion = SUSPICION_LINES[currentQuestion];
   if (suspicion) {
-    document.getElementById('alien-sprite').textContent = '🤨';
+    setAlienExpression('suspicious');
     await showDialog("ZORGBLAX", suspicion);
     await waitForAdvance();
-    document.getElementById('alien-sprite').textContent = '👾';
+    setAlienExpression('neutral');
   }
 
   // Ask the question
@@ -1054,7 +1221,7 @@ async function selectAnswer(index) {
   dimOverlay.classList.remove('active');
   const q = QUESTIONS[currentQuestion];
   const thinkLine = THINKING_LINES[currentQuestion % THINKING_LINES.length];
-  document.getElementById('alien-sprite').textContent = '🤔';
+  setAlienExpression('thinking');
   await showDialog("ZORGBLAX", thinkLine);
   await sleep(2000);
 
@@ -1066,7 +1233,7 @@ async function selectAnswer(index) {
 
   // Always "correct"
   sfxCorrect();
-  document.getElementById('alien-sprite').textContent = '🥳';
+  setAlienExpression('celebrating');
 
   const correctLines = [
     "CORRECT!!! (I think?!)",
@@ -1081,12 +1248,12 @@ async function selectAnswer(index) {
   await waitForAdvance();
 
   // Answer-specific reaction
-  document.getElementById('alien-sprite').textContent = '😱';
+  setAlienExpression('shocked');
   const reaction = q.reactions[index];
   await showDialog("ZORGBLAX", reaction);
   await waitForAdvance();
 
-  document.getElementById('alien-sprite').textContent = '👾';
+  setAlienExpression('neutral');
   currentQuestion++;
   if (currentQuestion >= QUESTIONS.length) {
     startDanceParty();
