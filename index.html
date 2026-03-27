@@ -295,10 +295,10 @@
     top: 440px;
     left: 12px;
     color: #ff6ee6;
-    font-size: 12px;
+    font-size: 14px;
     z-index: 10;
     line-height: 2;
-    max-width: 320px;
+    max-width: 420px;
     text-shadow: 0 0 6px #000, 0 0 12px #000, 2px 2px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000;
   }
 
@@ -313,7 +313,7 @@
     gap: 2px;
   }
   .prize-step {
-    font-size: 9px;
+    font-size: 11px;
     color: #555;
     padding: 3px 6px;
     text-align: right;
@@ -1552,8 +1552,7 @@ function updateHUD() {
   PRIZES.forEach((p, i) => {
     const step = document.createElement('div');
     step.className = 'prize-step';
-    const shortName = p.length > 22 ? p.substring(0, 20) + '..' : p;
-    step.textContent = (i + 1) + '. ' + shortName;
+    step.textContent = (i + 1) + '. ' + p;
     if (i < currentQuestion) step.classList.add('won');
     if (i === currentQuestion) step.classList.add('active');
     ladder.appendChild(step);
