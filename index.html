@@ -368,59 +368,53 @@
   #dance-screen {
     text-align: center;
     overflow: hidden;
+    background: #000;
   }
-  .dance-floor {
+  #dance-canvas {
     position: absolute;
-    top: 0; left: 0; width: 100%; height: 100%;
-    display: flex;
-    flex-wrap: wrap;
-  }
-  .dance-tile {
-    width: 64px; height: 60px;
-    animation: tile-flash 0.5s infinite alternate;
-  }
-  @keyframes tile-flash {
-    0% { opacity: 0.6; } 100% { opacity: 1; }
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    image-rendering: pixelated;
+    z-index: 10;
   }
   .dance-text {
     position: absolute;
-    top: 40px;
+    top: 20px;
     width: 100%;
-    color: #ffec27;
-    font-size: 12px;
+    font-size: 11px;
     z-index: 20;
-    text-shadow: 2px 2px #880000;
+    text-shadow: 2px 2px #000;
     animation: dance-bounce 0.4s infinite alternate;
-    line-height: 2.5;
+    line-height: 2.8;
   }
   @keyframes dance-bounce {
     0% { transform: translateY(0) scale(1); }
-    100% { transform: translateY(-8px) scale(1.05); }
+    100% { transform: translateY(-6px) scale(1.05); }
   }
-  .dancer {
+
+  .zorpbuck-counter {
     position: absolute;
-    font-size: 36px;
-    z-index: 15;
-    animation: dancer-move 0.5s infinite alternate;
-  }
-  @keyframes dancer-move {
-    0% { transform: translateY(0) rotate(-5deg); }
-    100% { transform: translateY(-10px) rotate(5deg); }
+    top: 100px;
+    width: 100%;
+    color: #ffec27;
+    font-size: 9px;
+    z-index: 20;
+    text-shadow: 2px 2px #000;
   }
 
   .credits {
     position: absolute;
-    bottom: 20px;
+    bottom: 0;
     width: 100%;
     color: #aaa;
-    font-size: 7px;
+    font-size: 6px;
     line-height: 2.5;
     z-index: 20;
-    animation: credits-scroll 8s linear infinite;
+    animation: credits-scroll 15s linear infinite;
   }
   @keyframes credits-scroll {
-    0% { transform: translateY(100%); }
-    100% { transform: translateY(-200%); }
+    0% { transform: translateY(480px); }
+    100% { transform: translateY(-500px); }
   }
 
   .play-again-btn {
@@ -492,9 +486,9 @@
 
   <!-- DANCE PARTY -->
   <div id="dance-screen" class="scene">
-    <div class="dance-floor" id="dance-floor"></div>
+    <canvas id="dance-canvas" width="256" height="240"></canvas>
     <div class="dance-text" id="dance-text"></div>
-    <div id="dancers"></div>
+    <div class="zorpbuck-counter" id="zorpbuck-counter"></div>
     <div class="credits" id="credits"></div>
     <button class="play-again-btn" id="play-again-btn" style="display:none;">PLAY AGAIN</button>
   </div>
@@ -1732,61 +1726,195 @@ async function selectAnswer(index) {
 }
 
 // ===== DANCE PARTY =====
-function startDanceParty() {
-  showScene('dance-screen');
-  sfxDance();
+// ===== DANCE PARTY CANVAS =====
+let danceActive = false;
+const danceColors = ['#ff004d','#ffec27','#5eff3e','#29adff','#ff6ee6','#ff77a8','#ffa300','#7e2553'];
 
-  // Build dance floor
-  const floor = document.getElementById('dance-floor');
-  floor.innerHTML = '';
-  const colors = ['#ff004d','#ffec27','#5eff3e','#29adff','#ff6ee6','#ff77a8','#ffa300','#7e2553'];
-  for (let i = 0; i < 64; i++) {
-    const tile = document.createElement('div');
-    tile.className = 'dance-tile';
-    tile.style.background = colors[Math.floor(Math.random() * colors.length)];
-    tile.style.animationDelay = (Math.random() * 0.5) + 's';
-    floor.appendChild(tile);
+// Pixel art dancer sprites (simple 2-frame animation)
+const dancerSprites = [];
+for (let i = 0; i < 10; i++) {
+  dancerSprites.push({
+    x: 20 + (i % 5) * 46,
+    y: 140 + Math.floor(i / 5) * 50,
+    color: danceColors[i % danceColors.length],
+    frame: 0,
+  });
+}
+
+function drawDanceParty(ctx, time) {
+  ctx.clearRect(0, 0, 256, 240);
+
+  // Flashing dance floor tiles
+  const tileSize = 16;
+  for (let y = 0; y < 15; y++) {
+    for (let x = 0; x < 16; x++) {
+      const colorIdx = (x + y + Math.floor(time * 4)) % danceColors.length;
+      ctx.fillStyle = danceColors[colorIdx];
+      ctx.globalAlpha = 0.4 + Math.sin(time * 6 + x + y) * 0.3;
+      ctx.fillRect(x * tileSize, y * tileSize, tileSize, tileSize);
+    }
+  }
+  ctx.globalAlpha = 1;
+
+  // Disco ball
+  const ballX = 128, ballY = 30, ballR = 14;
+  // String
+  ctx.strokeStyle = '#888';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(ballX, 0);
+  ctx.lineTo(ballX, ballY - ballR);
+  ctx.stroke();
+  // Ball body
+  ctx.fillStyle = '#ccc';
+  ctx.beginPath();
+  ctx.arc(ballX, ballY, ballR, 0, Math.PI * 2);
+  ctx.fill();
+  // Facets
+  for (let i = 0; i < 12; i++) {
+    const angle = (i / 12) * Math.PI * 2 + time * 2;
+    const fx = ballX + Math.cos(angle) * (ballR - 3);
+    const fy = ballY + Math.sin(angle) * (ballR - 3);
+    ctx.fillStyle = Math.sin(time * 8 + i) > 0 ? '#fff' : '#aaa';
+    ctx.fillRect(fx - 1, fy - 1, 3, 3);
+  }
+  // Light rays from disco ball
+  ctx.globalAlpha = 0.15;
+  for (let i = 0; i < 8; i++) {
+    const angle = (i / 8) * Math.PI * 2 + time * 1.5;
+    const rayLen = 100 + Math.sin(time * 3 + i) * 30;
+    ctx.strokeStyle = danceColors[i % danceColors.length];
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(ballX, ballY);
+    ctx.lineTo(ballX + Math.cos(angle) * rayLen, ballY + Math.sin(angle) * rayLen);
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+  ctx.lineWidth = 1;
+
+  // Pixel dancers (2-frame animation)
+  const frame = Math.floor(time * 4) % 2;
+  dancerSprites.forEach((d, i) => {
+    const bob = Math.sin(time * 6 + i) * 3;
+    const dx = d.x;
+    const dy = d.y + bob;
+
+    // Head
+    ctx.fillStyle = d.color;
+    ctx.fillRect(dx, dy, 6, 5);
+    // Eyes
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(dx + 1, dy + 1, 1, 1);
+    ctx.fillRect(dx + 4, dy + 1, 1, 1);
+    // Body
+    ctx.fillStyle = d.color;
+    ctx.fillRect(dx - 1, dy + 5, 8, 8);
+
+    // Arms (alternating frames)
+    if (frame === 0) {
+      ctx.fillRect(dx - 3, dy + 4, 2, 5);  // left arm down
+      ctx.fillRect(dx + 7, dy + 2, 2, 5);  // right arm up-ish
+    } else {
+      ctx.fillRect(dx - 3, dy + 2, 2, 5);  // left arm up-ish
+      ctx.fillRect(dx + 7, dy + 4, 2, 5);  // right arm down
+    }
+    // Legs
+    ctx.fillStyle = '#1a0033';
+    ctx.fillRect(dx, dy + 13, 2, 4);
+    ctx.fillRect(dx + 4, dy + 13, 2, 4);
+  });
+
+  // Fireworks (periodic bursts)
+  const fwPhase = Math.floor(time * 2) % 3;
+  const fwX = [64, 192, 128][fwPhase];
+  const fwY = [50, 60, 80][fwPhase];
+  const fwAge = (time * 2) % 1;
+  if (fwAge < 0.7) {
+    const numSparks = 12;
+    for (let i = 0; i < numSparks; i++) {
+      const angle = (i / numSparks) * Math.PI * 2;
+      const dist = fwAge * 40;
+      ctx.fillStyle = danceColors[(i + fwPhase) % danceColors.length];
+      ctx.globalAlpha = 1 - fwAge;
+      ctx.fillRect(fwX + Math.cos(angle) * dist, fwY + Math.sin(angle) * dist, 2, 2);
+    }
+    ctx.globalAlpha = 1;
   }
 
-  // Randomize tiles continuously
+  // Confetti rain
+  for (let i = 0; i < 30; i++) {
+    const cx = (i * 47 + time * 40) % 256;
+    const cy = (i * 31 + time * (50 + i * 2)) % 240;
+    const wobble = Math.sin(time * 5 + i) * 2;
+    ctx.fillStyle = danceColors[i % danceColors.length];
+    ctx.fillRect(cx + wobble, cy, 2, 3);
+  }
+}
+
+function animateDance() {
+  if (!danceActive) return;
+  const canvas = document.getElementById('dance-canvas');
+  const ctx = canvas.getContext('2d');
+  drawDanceParty(ctx, Date.now() / 1000);
+  requestAnimationFrame(animateDance);
+}
+
+function startDanceParty() {
+  stageAnimActive = false;
+  showScene('dance-screen');
+  sfxDance();
+  danceActive = true;
+  animateDance();
+
+  // Rainbow cycling text
+  const textEl = document.getElementById('dance-text');
+  let hue = 0;
   setInterval(() => {
-    floor.querySelectorAll('.dance-tile').forEach(t => {
-      t.style.background = colors[Math.floor(Math.random() * colors.length)];
-    });
-  }, 500);
+    hue = (hue + 5) % 360;
+    textEl.style.color = `hsl(${hue}, 100%, 60%)`;
+  }, 50);
+  textEl.innerHTML = "YOU ARE A BLORGINAIRE!<br>DANCE PARTY!!";
 
-  // Dance text
-  document.getElementById('dance-text').innerHTML =
-    "&#x1F389; YOU ARE A BLORGINAIRE! &#x1F389;<br>&#x1F47E; DANCE PARTY!! &#x1F47E;";
-
-  // Dancers
-  const dancersEl = document.getElementById('dancers');
-  dancersEl.innerHTML = '';
-  const dancerEmojis = ['👾','👽','🛸','🤖','🕺','💃','🐙','🪩','🦑','🎷','🎸','🥁'];
-  dancerEmojis.forEach((emoji, i) => {
-    const d = document.createElement('div');
-    d.className = 'dancer';
-    d.textContent = emoji;
-    d.style.left = (30 + (i % 6) * 78) + 'px';
-    d.style.top = (160 + Math.floor(i / 6) * 100) + 'px';
-    d.style.animationDelay = (i * 0.12) + 's';
-    dancersEl.appendChild(d);
-  });
+  // Zorpbuck counter (rapidly counting up)
+  const counterEl = document.getElementById('zorpbuck-counter');
+  let count = 0;
+  const targetCount = 9999999;
+  const countInterval = setInterval(() => {
+    count += Math.floor(Math.random() * 500000) + 100000;
+    if (count >= targetCount) {
+      count = targetCount;
+      counterEl.innerHTML = count.toLocaleString() + " ZORPBUCKS<br>(worth exactly nothing)";
+      clearInterval(countInterval);
+    } else {
+      counterEl.textContent = count.toLocaleString() + " ZORPBUCKS";
+    }
+  }, 100);
 
   // Credits
   document.getElementById('credits').innerHTML =
     "CREATED BY ZORGBLAX PRODUCTIONS<br><br>" +
-    "HOST: ZORGBLAX THE MAGNIFICENT<br><br>" +
-    "CONTESTANT: YOU (Earth Creature #7,832,491,002)<br><br>" +
-    "CATERING: BLORP'S SPACE DINER<br><br>" +
-    "ZORPBUCKS HAVE NO VALUE IN ANY KNOWN DIMENSION<br><br>" +
-    "NO HUMANS WERE HARMED (probably)<br><br>" +
-    "&#x1F47E; THANKS FOR PLAYING! &#x1F47E;";
+    "HOST: ZORGBLAX THE MAGNIFICENT<br>" +
+    "(winner of 0 awards)<br><br>" +
+    "CONTESTANT: YOU<br>" +
+    "(Earth Creature #7,832,491,002)<br><br>" +
+    "CATERING: BLORP'S SPACE DINER<br>" +
+    "(3 stars out of 47)<br><br>" +
+    "AUDIENCE WRANGLER: GREG<br>" +
+    "(Greg is a sentient mop)<br><br>" +
+    "LEGAL: Zorpbucks have no value in any<br>" +
+    "known or unknown dimension. Side effects<br>" +
+    "may include tentacle growth, time loops,<br>" +
+    "and an unshakeable feeling of cosmic<br>" +
+    "insignificance. By playing you agree to<br>" +
+    "surrender your planet. (just kidding)<br>" +
+    "(or are we?)<br><br>" +
+    "THANKS FOR PLAYING!";
 
   // Play again button
   setTimeout(() => {
     document.getElementById('play-again-btn').style.display = 'block';
-  }, 3000);
+  }, 4000);
 }
 
 // ===== INIT =====
