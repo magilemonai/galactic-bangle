@@ -143,36 +143,32 @@
 
   /* ===== STAGE / GAME SCREEN ===== */
   #game-screen {
-    background: linear-gradient(180deg, #1a0033 0%, #2d004d 40%, #1a0033 100%);
+    background: #0a0015;
   }
-  .stage-lights {
+  #stage-canvas {
     position: absolute;
-    top: 0; left: 0; width: 100%; height: 60px;
-    display: flex;
-    justify-content: space-around;
-    padding: 8px;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    image-rendering: pixelated;
+    z-index: 0;
   }
-  .stage-light {
-    width: 12px; height: 12px;
-    border-radius: 50%;
-    animation: light-flash 0.8s infinite alternate;
-  }
-  @keyframes light-flash { 0%{opacity:0.3} 100%{opacity:1} }
-
-  .audience {
+  /* Particle canvas for sparkles/confetti */
+  #particle-canvas {
     position: absolute;
-    bottom: 0; left: 0; width: 100%;
-    height: 50px;
-    display: flex;
-    justify-content: center;
-    gap: 2px;
-    flex-wrap: wrap;
-    overflow: hidden;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 11;
   }
-  .audience-member {
-    width: 14px; height: 18px;
-    border-radius: 50% 50% 0 0;
-    margin-top: auto;
+  /* CRT overlay effect */
+  #crt-overlay {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 998;
+    background:
+      repeating-linear-gradient(0deg, rgba(0,0,0,0.12) 0px, rgba(0,0,0,0.12) 1px, transparent 1px, transparent 2px),
+      radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,0.4) 100%);
   }
 
   /* Alien host */
@@ -476,7 +472,8 @@
 
   <!-- GAME SCREEN -->
   <div id="game-screen" class="scene">
-    <div class="stage-lights" id="stage-lights"></div>
+    <canvas id="stage-canvas" width="256" height="240"></canvas>
+    <canvas id="particle-canvas" width="512" height="480"></canvas>
     <div class="dim-overlay" id="dim-overlay"></div>
     <div class="hud-left" id="hud-left"></div>
     <div class="prize-ladder" id="prize-ladder"></div>
@@ -491,7 +488,6 @@
     </div>
     <div class="choices" id="choices" style="display:none;"></div>
     <div class="audience-bubble" id="audience-bubble"></div>
-    <div class="audience" id="audience"></div>
   </div>
 
   <!-- DANCE PARTY -->
@@ -503,6 +499,7 @@
     <button class="play-again-btn" id="play-again-btn" style="display:none;">PLAY AGAIN</button>
   </div>
 
+  <div id="crt-overlay"></div>
 </div>
 
 <script>
@@ -1188,31 +1185,166 @@ async function playWormhole() {
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 // ===== STAGE SETUP =====
-function buildStage() {
-  // Lights
-  const lightsEl = document.getElementById('stage-lights');
-  lightsEl.innerHTML = '';
-  const lightColors = ['#ff004d','#ffec27','#5eff3e','#29adff','#ff6ee6','#ff004d','#ffec27','#5eff3e'];
-  lightColors.forEach((c, i) => {
-    const l = document.createElement('div');
-    l.className = 'stage-light';
-    l.style.background = c;
-    l.style.animationDelay = (i * 0.15) + 's';
-    lightsEl.appendChild(l);
+const stageCanvas = document.getElementById('stage-canvas');
+const stageCtx = stageCanvas ? stageCanvas.getContext('2d') : null;
+
+// Audience aliens (pixel art data)
+const audienceAliens = [];
+for (let i = 0; i < 24; i++) {
+  audienceAliens.push({
+    x: 6 + (i % 12) * 20 + (Math.floor(i / 12) * 10),
+    y: 206 + Math.floor(i / 12) * 16,
+    color: ['#5eff3e','#29adff','#ff6ee6','#ffec27','#ff77a8','#ffa300'][i % 6],
+    bobOffset: Math.random() * Math.PI * 2,
+    bobSpeed: 1.5 + Math.random(),
+  });
+}
+
+let stageAnimActive = false;
+
+function drawStage(time) {
+  if (!stageCtx) return;
+  const ctx = stageCtx;
+  ctx.clearRect(0, 0, 256, 240);
+
+  // Background gradient (deep space purple)
+  const grad = ctx.createLinearGradient(0, 0, 0, 240);
+  grad.addColorStop(0, '#0a0020');
+  grad.addColorStop(0.3, '#1a0040');
+  grad.addColorStop(0.6, '#2d0060');
+  grad.addColorStop(1, '#0a0015');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, 256, 240);
+
+  // Distant stars
+  for (let i = 0; i < 20; i++) {
+    const sx = (i * 37 + 11) % 256;
+    const sy = (i * 23 + 7) % 100;
+    ctx.fillStyle = (Math.sin(time * 2 + i) > 0.3) ? '#fff' : '#555';
+    ctx.fillRect(sx, sy, 1, 1);
+  }
+
+  // Spotlight cones from top
+  ctx.globalAlpha = 0.08;
+  const spotColors = ['#ff004d', '#ffec27', '#5eff3e', '#29adff', '#ff6ee6'];
+  for (let i = 0; i < 5; i++) {
+    const sx = 30 + i * 50;
+    const sway = Math.sin(time * 1.5 + i * 1.2) * 15;
+    ctx.fillStyle = spotColors[i];
+    ctx.beginPath();
+    ctx.moveTo(sx, 0);
+    ctx.lineTo(sx + sway - 30, 200);
+    ctx.lineTo(sx + sway + 30, 200);
+    ctx.closePath();
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // Stage floor
+  ctx.fillStyle = '#1a0033';
+  ctx.fillRect(0, 192, 256, 4);
+  ctx.fillStyle = '#330055';
+  ctx.fillRect(0, 196, 256, 44);
+
+  // Stage floor tiles
+  for (let i = 0; i < 16; i++) {
+    ctx.fillStyle = i % 2 === 0 ? '#2a0045' : '#380060';
+    ctx.fillRect(i * 16, 196, 16, 44);
+  }
+  ctx.fillStyle = '#ffec27';
+  ctx.fillRect(0, 192, 256, 2); // gold trim
+
+  // Stage light fixtures at top
+  for (let i = 0; i < 8; i++) {
+    const lx = 16 + i * 32;
+    const pulse = (Math.sin(time * 4 + i * 0.8) + 1) / 2;
+    ctx.fillStyle = '#333';
+    ctx.fillRect(lx - 3, 0, 6, 4);
+    ctx.fillStyle = spotColors[i % 5];
+    ctx.globalAlpha = 0.4 + pulse * 0.6;
+    ctx.fillRect(lx - 2, 4, 4, 3);
+    ctx.globalAlpha = 1;
+  }
+
+  // Animated audience (pixel blobs)
+  audienceAliens.forEach(a => {
+    const bob = Math.sin(time * a.bobSpeed + a.bobOffset) * 2;
+    const ay = a.y + bob;
+    // Head
+    ctx.fillStyle = a.color;
+    ctx.fillRect(a.x, ay, 6, 5);
+    // Eyes
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(a.x + 1, ay + 1, 1, 1);
+    ctx.fillRect(a.x + 4, ay + 1, 1, 1);
+    // Body
+    ctx.fillStyle = a.color;
+    ctx.globalAlpha = 0.7;
+    ctx.fillRect(a.x - 1, ay + 5, 8, 6);
+    ctx.globalAlpha = 1;
   });
 
-  // Audience
-  const audEl = document.getElementById('audience');
-  audEl.innerHTML = '';
-  const alienEmojis = ['👽','👾','🛸','🤖','👹','🐙','🦑','🪼'];
-  for (let i = 0; i < 30; i++) {
-    const m = document.createElement('div');
-    m.className = 'audience-member';
-    m.style.fontSize = '14px';
-    m.textContent = alienEmojis[i % alienEmojis.length];
-    m.style.animationDelay = (Math.random() * 2) + 's';
-    audEl.appendChild(m);
+  // Floating "ZORP TV" logo in corner
+  ctx.fillStyle = '#ffec27';
+  ctx.globalAlpha = 0.4;
+  ctx.font = '6px monospace';
+  ctx.fillText('ZORP TV', 2, 238);
+  ctx.globalAlpha = 1;
+}
+
+function animateStage() {
+  if (!stageAnimActive) return;
+  drawStage(Date.now() / 1000);
+  requestAnimationFrame(animateStage);
+}
+
+// ===== PARTICLE SYSTEM =====
+const particleCanvas = document.getElementById('particle-canvas');
+const particleCtx = particleCanvas ? particleCanvas.getContext('2d') : null;
+let particles = [];
+
+function spawnParticles(x, y, count, colors, speed = 3) {
+  for (let i = 0; i < count; i++) {
+    const angle = (Math.PI * 2 * i) / count + Math.random() * 0.5;
+    const vel = speed * (0.5 + Math.random());
+    particles.push({
+      x, y,
+      vx: Math.cos(angle) * vel,
+      vy: Math.sin(angle) * vel - 1,
+      life: 1,
+      decay: 0.015 + Math.random() * 0.02,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      size: 2 + Math.random() * 3,
+    });
   }
+}
+
+function updateParticles() {
+  if (!particleCtx) return;
+  particleCtx.clearRect(0, 0, 512, 480);
+  particles = particles.filter(p => p.life > 0);
+  particles.forEach(p => {
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vy += 0.08; // gravity
+    p.life -= p.decay;
+    particleCtx.globalAlpha = p.life;
+    particleCtx.fillStyle = p.color;
+    particleCtx.fillRect(p.x, p.y, p.size, p.size);
+  });
+  particleCtx.globalAlpha = 1;
+  requestAnimationFrame(updateParticles);
+}
+updateParticles();
+
+// Sparkle burst on correct answer
+function correctParticles() {
+  spawnParticles(256, 200, 30, ['#ffec27','#5eff3e','#ff6ee6','#29adff','#fff'], 4);
+}
+
+function buildStage() {
+  stageAnimActive = true;
+  animateStage();
 }
 
 // ===== QUESTIONS =====
@@ -1568,6 +1700,7 @@ async function selectAnswer(index) {
 
   // Always "correct"
   sfxCorrect();
+  correctParticles();
   setAlienExpression('celebrating');
 
   const correctLines = [
